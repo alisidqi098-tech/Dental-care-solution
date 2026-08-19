@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dental Care Solution AI</title>
@@ -60,7 +59,7 @@
 
         .brand-logo span { color: var(--accent-cyan); }
 
-        nav ul { display: flex; list-style: none; gap: 20px; align-items: center; }
+        nav ul { display: flex; list-style: none; gap: 15px; align-items: center; }
 
         nav button {
             background: none;
@@ -76,6 +75,7 @@
             gap: 8px;
             padding: 8px 14px;
             border-radius: 8px;
+            white-space: nowrap;
         }
 
         nav button:hover, nav button.active {
@@ -100,7 +100,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* DASHBOARD GRID SUPERIORE (FACCINA AI + APPUNTAMENTI OGGI) */
+        /* DASHBOARD GRID SUPERIORE */
         .dashboard-layout {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -130,7 +130,7 @@
         .patient-name { font-weight: 600; margin-top: 4px; }
         .treatment-type { font-size: 0.85rem; color: var(--text-muted); }
 
-        /* SEZIONE FACCINA AI (HERO SECTION) */
+        /* SEZIONE FACCINA AI */
         .hero-section {
             text-align: center;
             display: flex;
@@ -175,13 +175,16 @@
             padding: 24px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
             width: 100%;
+            overflow-x: auto;
         }
 
         .card-header { font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 
-        /* TABELLA REGISTRO PAZIENTI WHATSAPP */
+        /* TABELLA PAZIENTI */
+        .table-responsive { width: 100%; overflow-x: auto; }
         .patient-table {
             width: 100%;
+            min-width: 500px;
             border-collapse: collapse;
             margin-top: 10px;
         }
@@ -198,22 +201,25 @@
             font-size: 0.9rem;
             border-bottom: 1px solid rgba(255,255,255,0.04);
         }
-        .patient-table tr:last-child td { border-bottom: none; }
 
-        /* GRIGLIA 3 COLONNE PER "CHI SIAMO" */
+        /* GRIGLIA 3 COLONNE */
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
 
-        @media (max-width: 900px) {
-            .grid-3 { grid-template-columns: 1fr; }
-            .dashboard-layout { grid-template-columns: 1fr; }
-        }
-
         /* AGENDA LIST */
         .agenda-list { display: flex; flex-direction: column; gap: 15px; }
+        .agenda-header-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr;
+            padding: 0 16px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
         .agenda-row {
             display: grid;
             grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr;
@@ -223,6 +229,7 @@
             border-radius: 12px;
             border-left: 4px solid var(--status-green);
             border: 1px solid rgba(255,255,255,0.05);
+            gap: 10px;
         }
         .agenda-row.rinviato { border-left-color: var(--status-yellow); }
         .agenda-row.disdetto { border-left-color: var(--status-red); opacity: 0.8; }
@@ -262,9 +269,7 @@
             width: 100%;
             transition: opacity 0.2s;
         }
-        .btn-primary:hover { opacity: 0.9; }
 
-        /* FOOTER */
         footer {
             background-color: rgba(15, 23, 42, 0.95);
             border-top: 1px solid var(--border-color);
@@ -273,32 +278,40 @@
             color: var(--text-muted);
             font-size: 0.85rem;
         }
-        
-    body {
-        padding: 10px;
-    }
-    
-    @media (max-width: 768px) {
-    /* 1. Blocca lo scroll orizzontale fastidioso */
-    body, html {
-        overflow-x: hidden !important;
-        width: 100% !important;
-        padding: 5px !important;
-    }
 
-    /* 2. Forza tutti i blocchi a incolonnarsi e cancella le altezze fisse */
-    div, section, main, header, .card, .container {
-        display: flex !important;
-        flex-direction: column !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        height: auto !important; /* <- Questo risolve le sovrapposizioni */
-        min-height: min-content !important;
-        position: relative !important;
-        margin-bottom: 15px !important;
-        box-sizing: border-box !important;
-    }
-}
+        /* OTTIMIZZAZIONE MOBILE COMPLETA */
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                padding: 15px;
+                gap: 15px;
+            }
+            nav { width: 100%; }
+            nav ul {
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 8px;
+                justify-content: flex-start;
+            }
+            main { padding: 20px 12px; }
+            .dashboard-layout { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr; }
+            
+            /* Sblocca le griglie in Cassa ed Analisi */
+            .tab-content > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Ripara la tabella Agenda sul telefono */
+            .agenda-header-row { display: none; }
+            .agenda-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 14px;
+            }
+            .agenda-row > div:nth-child(2) { grid-column: span 2; }
+            .agenda-row > div:nth-child(3) { grid-column: span 2; }
+        }
     </style>
 </head>
 <body>
@@ -319,7 +332,6 @@
 
     <main>
         <section id="dashboard" class="tab-content active">
-            
             <div class="dashboard-layout">
                 <div class="today-card">
                     <h3 style="color: var(--accent-cyan); font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
@@ -335,7 +347,7 @@
                         <div class="patient-name">Lucia Ferri</div>
                         <div class="treatment-type">Controllo apparecchio</div>
                     </div>
-                    <button onclick="switchTab('agenda')" style="margin-top: auto; background: none; border: 1px solid var(--border-color); color: var(--accent-cyan); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <button onclick="switchTab('agenda')" style="margin-top: 15px; background: none; border: 1px solid var(--border-color); color: var(--accent-cyan); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         Vedi tutta l'Agenda <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
@@ -351,36 +363,38 @@
 
             <div class="card">
                 <div class="card-header"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Bot WhatsApp Integrato & Registro Pazienti</div>
-                <table class="patient-table">
-                    <thead>
-                        <tr>
-                            <th>Paziente</th>
-                            <th>Telefono</th>
-                            <th>Motivo Visita</th>
-                            <th>Data / Ora</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Giuseppe Verdi</strong></td>
-                            <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
-                            <td>Pulizia dei denti</td>
-                            <td style="color: var(--accent-cyan);">Domani 15:00</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Andrea Bernardini</strong></td>
-                            <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
-                            <td>Sbiancamento dentale</td>
-                            <td style="color: var(--accent-cyan);">Oggi 15:15</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Gaia Golden</strong></td>
-                            <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
-                            <td>Rimozione carie</td>
-                            <td style="color: var(--accent-cyan);">Domani 11:00</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="patient-table">
+                        <thead>
+                            <tr>
+                                <th>Paziente</th>
+                                <th>Telefono</th>
+                                <th>Motivo Visita</th>
+                                <th>Data / Ora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Giuseppe Verdi</strong></td>
+                                <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
+                                <td>Pulizia dei denti</td>
+                                <td style="color: var(--accent-cyan);">Domani 15:00</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Andrea Bernardini</strong></td>
+                                <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
+                                <td>Sbiancamento dentale</td>
+                                <td style="color: var(--accent-cyan);">Oggi 15:15</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gaia Golden</strong></td>
+                                <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
+                                <td>Rimozione carie</td>
+                                <td style="color: var(--accent-cyan);">Domani 11:00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="card">
@@ -406,18 +420,17 @@
                     </div>
                 </div>
             </div>
-
         </section>
 
         <section id="agenda" class="tab-content">
             <div class="card">
-                <div class="card-header" style="justify-content: space-between;">
+                <div class="card-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                     <span><i class="fa-solid fa-calendar-days"></i> Gestione Agenda Completa</span>
                     <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;"><i class="fa-brands fa-whatsapp"></i> Twilio Live Feed</span>
                 </div>
                 
                 <div class="agenda-list">
-                    <div style="display: grid; grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr; padding: 0 16px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">
+                    <div class="agenda-header-row">
                         <div>Data / Ora</div>
                         <div>Paziente & Dettagli</div>
                         <div>Problema / Terapia</div>
@@ -499,7 +512,7 @@
                         <span style="color: var(--text-muted); font-size: 0.9rem;">Incasso Mensile</span>
                         <div style="font-size: 2.5rem; font-weight: 800; color: white;" id="live-revenue">€ 0.00</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px; font-size: 0.9rem;">
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px; font-size: 0.9rem; flex-wrap: wrap; gap: 10px;">
                         <span>Transazioni Stripe: <strong id="tx-count">0</strong></span>
                         <span style="color: var(--status-green); font-weight: bold;"><i class="fa-solid fa-arrow-up"></i> +12% vs mese scorso</span>
                     </div>
@@ -520,7 +533,6 @@
                 </div>
             </div>
         </section>
-
     </main>
 
     <footer>
