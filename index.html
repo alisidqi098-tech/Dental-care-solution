@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dental Care Solution AI</title>
@@ -272,6 +273,17 @@
             color: var(--text-muted);
             font-size: 0.85rem;
         }
+        @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    /* Questa regola forza tutti i contenitori principali ad andare a capo sul telefono */
+    div {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+}
     </style>
 </head>
 <body>
