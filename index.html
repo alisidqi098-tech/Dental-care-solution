@@ -273,15 +273,30 @@
             color: var(--text-muted);
             font-size: 0.85rem;
         }
-        @media (max-width: 768px) {
+        
     body {
         padding: 10px;
     }
     
-    /* Questa regola forza tutti i contenitori principali ad andare a capo sul telefono */
-    div {
+    @media (max-width: 768px) {
+    /* 1. Blocca lo scroll orizzontale fastidioso */
+    body, html {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        padding: 5px !important;
+    }
+
+    /* 2. Forza tutti i blocchi a incolonnarsi e cancella le altezze fisse */
+    div, section, main, header, .card, .container {
+        display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important; /* <- Questo risolve le sovrapposizioni */
+        min-height: min-content !important;
+        position: relative !important;
+        margin-bottom: 15px !important;
+        box-sizing: border-box !important;
     }
 }
     </style>
