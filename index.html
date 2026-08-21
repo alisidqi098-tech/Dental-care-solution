@@ -315,7 +315,28 @@
     </style>
 </head>
 <body>
-
+<!-- SCHERMATA DI LOGIN OVERLAY -->
+    <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background-color: var(--bg-dark); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="max-width: 400px; width: 90%; text-align: center; border-top: 4px solid var(--accent-cyan);">
+            <div style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 15px;"><i class="fa-solid fa-lock"></i></div>
+            <h2 style="margin-bottom: 25px; color: white;">Accesso Riservato</h2>
+            
+            <div class="form-group" style="text-align: left;">
+                <label>Email Dottore / Segreteria</label>
+                <input type="email" id="login-email" placeholder="admin@studio.it">
+            </div>
+            
+            <div class="form-group" style="text-align: left; margin-bottom: 25px;">
+                <label>Password di Sicurezza</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            
+            <button class="btn-primary" onclick="attemptLogin()">Accedi al Gestionale <i class="fa-solid fa-arrow-right"></i></button>
+            <p id="login-error" style="color: var(--status-red); margin-top: 15px; font-size: 0.85rem; display: none; font-weight: bold;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Credenziali errate, riprova.
+            </p>
+        </div>
+    </div>
     <header>
         <a href="#" class="brand-logo">
             <i class="fa-solid fa-tooth"></i> Dental Care Solution <span>AI</span>
@@ -593,5 +614,45 @@
                 }).catch(() => {});
         }, 5000);
     </script>
+    // --- LOGICA DI LOGIN ---
+        // 1. Controlla se c'è già una sessione salvata quando apri la pagina
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = localStorage.getItem("auth_token");
+            if (token) {
+                // Se ha il token, nascondi il blocco e mostra la dashboard
+                document.getElementById("login-overlay").style.display = "none";
+            }
+        });
+
+        // 2. Funzione per tentare l'accesso
+        async function attemptLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                // Chiama il nostro backend per verificare (lo creeremo nel prossimo step)
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Salva la chiave magica (token) nel browser
+                    localStorage.setItem("auth_token", data.token);
+                    // Nasconde la schermata di login
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('login-error').style.display = 'none';
+                } else {
+                    // Mostra errore se la password è sbagliata
+                    document.getElementById('login-error').style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Errore di connessione al server:", error);
+                document.getElementById('login-error').innerText = "Errore di connessione. Riprova.";
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
 </body>
 </html>
