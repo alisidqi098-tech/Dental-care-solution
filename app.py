@@ -218,3 +218,23 @@ def live_stats():
 if __name__ == '__main__':
     threading.Thread(target=avvia_tunnel, daemon=True).start()
     app.run(port=5000, debug=True, use_reloader=False)
+    # --- ROTTA PER SERVIRE LA DASHBOARD ---
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# --- ROTTA API DI AUTENTICAZIONE ---
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    email = data.get('email', '')
+    password = data.get('password', '')
+    
+    # Credenziali (puoi personalizzarle o metterle su Render)
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "studio2026")
+
+    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+        return jsonify({"status": "success", "token": "sessione_valida_medico_2026"}), 200
+    
+    return jsonify({"status": "error", "message": "Credenziali errate"}), 401
