@@ -1,9 +1,9 @@
 import os
 import json
 import threading
+import sqlite3
 # import ngrok
 from flask import Flask, request, jsonify, render_template
-from flask import jsonify 
 from groq import Groq
 from twilio.twiml.messaging_response import MessagingResponse
 from dotenv import load_dotenv
@@ -12,39 +12,52 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY=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"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 cronologia_chat = {}
 
-# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU FILE JSON ---
-def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
-    file_path = "prenotazioni.json"
-    prenotazioni = []
-    
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                prenotazioni = json.load(f)
-        except Exception:
-            prenotazioni = []
-            
-    nuova_prenotazione = {
-        "telefono": numero_telefono,
-        "nome_cognome": nome_cognome,
-        "motivo": motivo,
-        "data_ora": data_ora,
-        "stato": "In attesa di conferma"
-    }
-    
-    prenotazioni.append(nuova_prenotazione)
-    
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(prenotazioni, f, ensure_ascii=False, indent=2)
-        
-    print(f"\n🎉 PRENOTAZIONE REGISTRATA: {nome_cognome} ({data_ora})\n")
-    return f"Prenotazione registrata con successo nel sistema per {nome_cognome}."
+# ==============================================================================
+# 🗄️ CONFIGURAZIONE DATABASE SQLITE (FASE 2)
+# ==============================================================================
+def init_db():
+    conn = sqlite3.connect('studio.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS prenotazioni (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telefono TEXT,
+            nome_cognome TEXT,
+            motivo TEXT,
+            data_ora TEXT,
+            stato TEXT DEFAULT 'In attesa di conferma'
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-# --- TOOL PER GROQ (FUNCTION CALLING) ---
+# Eseguiamo la creazione della tabella all'avvio del server
+init_db()
+
+# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU SQLITE ---
+def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
+    try:
+        conn = sqlite3.connect('studio.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora)
+            VALUES (?, ?, ?, ?)
+        ''', (numero_telefono, nome_cognome, motivo, data_ora))
+        conn.commit()
+        conn.close()
+        print(f"\n🎉 PRENOTAZIONE REGISTRATA NEL DB: {nome_cognome} ({data_ora})\n")
+        return f"Prenotazione registrata con successo nel sistema per {nome_cognome}."
+    except Exception as e:
+        print(f"Errore nel salvataggio DB: {e}")
+        return "Errore interno durante il salvataggio."
+
+# ==============================================================================
+# 🛠️ TOOL PER GROQ E FUNZIONI CLINICA
+# ==============================================================================
 tools = [
     {
         "type": "function",
@@ -64,7 +77,6 @@ tools = [
     }
 ]
 
-# --- LETTURA DATABASE CLINICA ---
 def carica_dati_clinica(id_clinica="dental_care_demo"):
     try:
         with open("database_cliniche.json", "r", encoding="utf-8") as f:
@@ -93,35 +105,54 @@ def genera_system_prompt(dati_clinica):
     return {"role": "system", "content": prompt}
 
 # ==============================================================================
-# 🌐 ROTTE WEB (CARICAMENTO DEL TUO INDEX.HTML)
+# 🌐 ROTTE WEB E DASHBOARD
 # ==============================================================================
-
-def leggi_prenotazioni():
-    if os.path.exists("prenotazioni.json"):
-        try:
-            with open("prenotazioni.json", "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
-
 @app.route('/')
 @app.route('/dashboard')
-def mostra_sito():
-    # Carica la lista aggiornata delle prenotazioni dal file JSON
-    prenotazioni = leggi_prenotazioni()
-    # Serve il tuo vero file templates/index.html passando le prenotazioni
-    return render_template('index.html', prenotazioni=prenotazioni)
+def home():
+    # Serve il file index.html presente nella cartella templates
+    return render_template('index.html')
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    email = data.get('email', '')
+    password = data.get('password', '')
+    
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "studio2026")
+
+    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+        return jsonify({"status": "success", "token": "sessione_valida_medico_2026"}), 200
+    
+    return jsonify({"status": "error", "message": "Credenziali errate"}), 401
 
 @app.route('/api/prenotazioni', methods=['GET'])
 def api_prenotazioni():
-    # API JSON per eventuali integrazioni o aggiornamenti via JavaScript
-    return jsonify(leggi_prenotazioni())
+    # Legge i dati dal Database SQLite per la Dashboard
+    try:
+        conn = sqlite3.connect('studio.db')
+        conn.row_factory = sqlite3.Row 
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
+        rows = cursor.fetchall()
+        conn.close()
+        
+        lista_prenotazioni = [dict(row) for row in rows]
+        return jsonify(lista_prenotazioni), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/live-stats', methods=['GET'])
+def live_stats():
+    return jsonify({
+        "revenue": 4850.00,
+        "transactions": 14
+    })
 
 # ==============================================================================
-# 📩 WEBHOOK WHATSAPP (TWILIO)
+# 📩 WEBHOOK WHATSAPP (TWILIO + GROQ)
 # ==============================================================================
-
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
     messaggio_utente = request.form.get('Body', '').strip()
@@ -193,48 +224,10 @@ def whatsapp_webhook():
 
     return str(resp), 200, {'Content-Type': 'text/xml'}
 
-# --- AVVIO SERVER ---
-def avvia_tunnel():
-    try:
-        ngrok.set_auth_token("3Gv2JTPhMS3MNUGdZq1hd7A2JiS_76oGLMkSatX6k8kZPrRDV")
-        listener = ngrok.forward(5000)
-        print("\n" + "="*60)
-        print("🚀 LINK WEBHOOK PER TWILIO:")
-        print(f"{listener.url()}/whatsapp-webhook")
-        print("🌐 SITO WEB E DASHBOARD APERTI SU:")
-        print(f"http://127.0.0.1:5000")
-        print("="*60 + "\n")
-    except Exception as e:
-        print(f"❌ Errore Ngrok: {e}")
-from flask import jsonify
-
-# Aggiungi questa rotta dentro il tuo file app.py
-@app.route('/api/live-stats', methods=['GET'])
-def live_stats():
-    return jsonify({
-        "revenue": 4850.00,
-        "transactions": 14
-    })
+# ==============================================================================
+# 🚀 AVVIO SERVER
+# ==============================================================================
 if __name__ == '__main__':
+    # Puoi rimuovere il commento da avvia_tunnel() se test in locale con ngrok
     # threading.Thread(target=avvia_tunnel, daemon=True).start()
     app.run(port=5000, debug=True, use_reloader=False)
-    # --- ROTTA PER SERVIRE LA DASHBOARD ---
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-# --- ROTTA API DI AUTENTICAZIONE ---
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.get_json() or {}
-    email = data.get('email', '')
-    password = data.get('password', '')
-    
-    # Credenziali (puoi personalizzarle o metterle su Render)
-    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "studio2026")
-
-    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-        return jsonify({"status": "success", "token": "sessione_valida_medico_2026"}), 200
-    
-    return jsonify({"status": "error", "message": "Credenziali errate"}), 401
