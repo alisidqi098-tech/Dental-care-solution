@@ -3,3 +3,4 @@ gunicorn
 groq 
 twilio
 python-dotenv
+stripe
