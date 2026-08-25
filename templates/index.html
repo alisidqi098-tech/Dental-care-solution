@@ -99,7 +99,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* DASHBOARD GRID SUPERIORE (FACCINA AI + APPUNTAMENTI OGGI) */
+        /* DASHBOARD GRID SUPERIORE */
         .dashboard-layout {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -129,7 +129,7 @@
         .patient-name { font-weight: 600; margin-top: 4px; }
         .treatment-type { font-size: 0.85rem; color: var(--text-muted); }
 
-        /* SEZIONE FACCINA AI (HERO SECTION) */
+        /* SEZIONE FACCINA AI */
         .hero-section {
             text-align: center;
             display: flex;
@@ -206,11 +206,6 @@
             gap: 20px;
         }
 
-        @media (max-width: 900px) {
-            .grid-3 { grid-template-columns: 1fr; }
-            .dashboard-layout { grid-template-columns: 1fr; }
-        }
-
         /* AGENDA LIST */
         .agenda-list { display: flex; flex-direction: column; gap: 15px; }
         .agenda-row {
@@ -272,10 +267,25 @@
             color: var(--text-muted);
             font-size: 0.85rem;
         }
+
+        /* MEDIA QUERIES MOBILE */
+        @media (max-width: 900px) {
+            .grid-3 { grid-template-columns: 1fr; }
+            .dashboard-layout { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 15px 20px; flex-direction: column; gap: 15px; }
+            nav ul { flex-wrap: wrap; justify-content: center; gap: 10px; }
+            body { padding: 0; }
+            main { padding: 20px 10px; }
+            .card { width: 100% !important; }
+            .agenda-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+        }
     </style>
 </head>
 <body>
-<!-- SCHERMATA DI LOGIN OVERLAY -->
+    <!-- SCHERMATA DI LOGIN OVERLAY -->
     <div id="login-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background-color: var(--bg-dark); z-index: 9999; display: flex; align-items: center; justify-content: center;">
         <div class="card" style="max-width: 400px; width: 90%; text-align: center; border-top: 4px solid var(--accent-cyan);">
             <div style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 15px;"><i class="fa-solid fa-lock"></i></div>
@@ -314,7 +324,6 @@
 
     <main>
         <section id="dashboard" class="tab-content active">
-            
             <div class="dashboard-layout">
                 <div class="today-card">
                     <h3 style="color: var(--accent-cyan); font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
@@ -355,7 +364,7 @@
                             <th>Data / Ora</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tabella-prenotazioni">
                         <tr>
                             <td><strong>Giuseppe Verdi</strong></td>
                             <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
@@ -401,7 +410,6 @@
                     </div>
                 </div>
             </div>
-
         </section>
 
         <section id="agenda" class="tab-content">
@@ -515,7 +523,6 @@
                 </div>
             </div>
         </section>
-
     </main>
 
     <footer>
@@ -575,23 +582,39 @@
                     if (tx) tx.innerText = data.transactions;
                 }).catch(() => {});
         }, 5000);
-        // --- LOGICA DI LOGIN ---
-        // 1. Controlla se c'è già una sessione salvata quando apri la pagina
+
         document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("auth_token");
             if (token) {
-                // Se ha il token, nascondi il blocco e mostra la dashboard
                 document.getElementById("login-overlay").style.display = "none";
             }
+
+            fetch('/api/prenotazioni')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('tabella-prenotazioni');
+                    if (!tbody || !data || data.length === 0) return;
+                    
+                    tbody.innerHTML = ''; 
+                    data.forEach(p => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${p.nome_cognome}</strong></td>
+                            <td style="color: var(--text-muted); font-size: 0.8rem;">${p.telefono}</td>
+                            <td>${p.motivo}</td>
+                            <td style="color: var(--accent-cyan);">${p.data_ora}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => console.error('Errore nel caricamento delle prenotazioni:', error));
         });
 
-        // 2. Funzione per tentare l'accesso
         async function attemptLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
 
             try {
-                // Chiama il nostro backend per verificare (lo creeremo nel prossimo step)
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -600,13 +623,10 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    // Salva la chiave magica (token) nel browser
                     localStorage.setItem("auth_token", data.token);
-                    // Nasconde la schermata di login
                     document.getElementById('login-overlay').style.display = 'none';
                     document.getElementById('login-error').style.display = 'none';
                 } else {
-                    // Mostra errore se la password è sbagliata
                     document.getElementById('login-error').style.display = 'block';
                 }
             } catch (error) {
@@ -618,20 +638,3 @@
     </script>
 </body>
 </html>
-/* Questo codice scatta solo se lo schermo è più stretto di 768px (quindi un telefono) */
-@media (max-width: 768px) {
-    /* Metti i contenitori in verticale */
-    .dashboard-container, .grid-container {
-        flex-direction: column !important;
-    }
-    
-    /* Riduci i margini e i font che solitamente sballano */
-    body {
-        padding: 10px;
-    }
-    
-    /* Fai in modo che le tabelle o le card non escano dallo schermo */
-    .card {
-        width: 100% !important;
-    }
-}
