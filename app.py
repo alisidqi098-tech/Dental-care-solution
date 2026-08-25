@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get(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""))
+client = Groq(api_key=os.environ.get("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")
 
 cronologia_chat = {}
 
