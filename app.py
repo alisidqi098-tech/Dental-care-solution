@@ -1,7 +1,7 @@
 import os
 import json
 import threading
-import ngrok
+# import ngrok
 from flask import Flask, request, jsonify, render_template
 from flask import jsonify 
 from groq import Groq
@@ -216,7 +216,7 @@ def live_stats():
         "transactions": 14
     })
 if __name__ == '__main__':
-    threading.Thread(target=avvia_tunnel, daemon=True).start()
+    # threading.Thread(target=avvia_tunnel, daemon=True).start()
     app.run(port=5000, debug=True, use_reloader=False)
     # --- ROTTA PER SERVIRE LA DASHBOARD ---
 @app.route('/')
