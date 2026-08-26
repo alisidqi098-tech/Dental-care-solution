@@ -2,7 +2,10 @@ import os
 import json
 import threading
 import sqlite3
-# import ngrok
+import datetime
+import jwt
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, request, jsonify, render_template
 from groq import Groq
 from twilio.twiml.messaging_response import MessagingResponse
@@ -13,6 +16,11 @@ load_dotenv()
 
 app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+# CONFIGURAZIONI SICUREZZA JWT E PASSWORD
+app.config['SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "chiave_segreta_default_2026")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
+ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "studio2026"))
 
 cronologia_chat = {}
 
@@ -35,10 +43,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Eseguiamo la creazione della tabella all'avvio del server
 init_db()
 
-# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU SQLITE ---
 def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     try:
         conn = sqlite3.connect('studio.db')
@@ -54,6 +60,33 @@ def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     except Exception as e:
         print(f"Errore nel salvataggio DB: {e}")
         return "Errore interno durante il salvataggio."
+
+# ==============================================================================
+# 🔒 DECORATORE PER PROTEGGERE LE ROTTE SENSIBILI
+# ==============================================================================
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+
+        if not token:
+            return jsonify({'message': 'Accesso negato: Token mancante!'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = data['user']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Sessione scaduta: Effettua nuovamente il login.'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Token non valido!'}), 401
+
+        return f(current_user, *args, **kwargs)
+
+    return decorated
 
 # ==============================================================================
 # 🛠️ TOOL PER GROQ E FUNZIONI CLINICA
@@ -84,7 +117,6 @@ def carica_dati_clinica(id_clinica="dental_care_demo"):
             return database.get(id_clinica, {})
     except Exception as e:
         print(f"⚠️ Warning: database_cliniche.json non trovato ({e}). Uso configurazione di fallback.")
-        
         return {
             "nome": "Dental Care Studio",
             "indirizzo": "Via Roma 1",
@@ -118,7 +150,6 @@ def genera_system_prompt(dati_clinica):
 @app.route('/')
 @app.route('/dashboard')
 def home():
-    # Serve il file index.html presente nella cartella templates
     return render_template('index.html')
 
 @app.route('/api/login', methods=['POST'])
@@ -126,18 +157,24 @@ def login():
     data = request.get_json() or {}
     email = data.get('email', '')
     password = data.get('password', '')
-    
-    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
-    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "studio2026")
 
-    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-        return jsonify({"status": "success", "token": "sessione_valida_medico_2026"}), 200
-    
+    if email == ADMIN_EMAIL and check_password_hash(ADMIN_PASSWORD_HASH, password):
+        token = jwt.encode({
+            'user': email,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+        }, app.config['SECRET_KEY'], algorithm="HS256")
+
+        return jsonify({
+            "status": "success",
+            "token": token,
+            "expires_in": "8h"
+        }), 200
+
     return jsonify({"status": "error", "message": "Credenziali errate"}), 401
 
 @app.route('/api/prenotazioni', methods=['GET'])
-def api_prenotazioni():
-    # Legge i dati dal Database SQLite per la Dashboard
+@token_required
+def api_prenotazioni(current_user):
     try:
         conn = sqlite3.connect('studio.db')
         conn.row_factory = sqlite3.Row 
@@ -236,6 +273,4 @@ def whatsapp_webhook():
 # 🚀 AVVIO SERVER
 # ==============================================================================
 if __name__ == '__main__':
-    # Puoi rimuovere il commento da avvia_tunnel() se test in locale con ngrok
-    # threading.Thread(target=avvia_tunnel, daemon=True).start()
     app.run(port=5000, debug=True, use_reloader=False)
