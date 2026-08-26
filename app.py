@@ -4,11 +4,13 @@ import threading
 import sqlite3
 import datetime
 import jwt
+import stripe
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, request, jsonify, render_template
 from groq import Groq
 from twilio.twiml.messaging_response import MessagingResponse
+from twilio.rest import Client
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente (.env)
@@ -17,15 +19,20 @@ load_dotenv()
 app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# CONFIGURAZIONI SICUREZZA JWT E PASSWORD
+# CONFIGURAZIONI SICUREZZA E INTEGRAZIONI
 app.config['SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "chiave_segreta_default_2026")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
 ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "studio2026"))
 
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "whatsapp:+14155238886")
+
 cronologia_chat = {}
 
 # ==============================================================================
-# 🗄️ CONFIGURAZIONE DATABASE SQLITE (FASE 2)
+# 🗄️ CONFIGURAZIONE DATABASE SQLITE
 # ==============================================================================
 def init_db():
     conn = sqlite3.connect('studio.db')
@@ -194,6 +201,57 @@ def live_stats():
         "revenue": 4850.00,
         "transactions": 14
     })
+
+# ==============================================================================
+# 💳 ROTTE PAGAMENTI STRIPE E NOTIFICHE TWILIO
+# ==============================================================================
+@app.route('/api/crea-sessione-pagamento', methods=['POST'])
+@token_required
+def crea_sessione_pagamento(current_user):
+    try:
+        data = request.get_json() or {}
+        servizio = data.get('servizio', 'Visita Odontoiatrica')
+        prezzo_euro = float(data.get('prezzo', 50.00))
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'eur',
+                    'product_data': {'name': servizio},
+                    'unit_amount': int(prezzo_euro * 100),
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=request.host_url + 'dashboard?status=success',
+            cancel_url=request.host_url + 'dashboard?status=cancel',
+        )
+        return jsonify({'url': session.url}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/invia-promemoria', methods=['POST'])
+@token_required
+def invia_promemoria(current_user):
+    try:
+        data = request.get_json() or {}
+        telefono = data.get('telefono')
+        nome = data.get('nome')
+        data_ora = data.get('data_ora')
+
+        client_twilio = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        messaggio = f"Ciao {nome}, ti ricordiamo il tuo appuntamento presso Dental Care Studio per il {data_ora}."
+        destinatario = telefono if telefono.startswith("whatsapp:") else f"whatsapp:{telefono}"
+        
+        message = client_twilio.messages.create(
+            body=messaggio,
+            from_=TWILIO_PHONE_NUMBER,
+            to=destinatario
+        )
+        return jsonify({'status': 'inviato', 'sid': message.sid}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==============================================================================
 # 📩 WEBHOOK WHATSAPP (TWILIO + GROQ)
