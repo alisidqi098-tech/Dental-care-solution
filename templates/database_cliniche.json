@@ -1,0 +1,21 @@
+{
+  "dental_care_demo": {
+    "nome": "Dental Care Solution AI",
+    "indirizzo": "Via Roma 100, Milano",
+    "telefono": "+39 02 1234567",
+    "orari": "Lunedì - Venerdì: 09:00 - 19:00 | Sabato: 09:00 - 13:00 | Domenica: Chiuso",
+    "servizi": [
+      {"nome": "Prima Visita + Ortopanoramica", "prezzo": "Gratuita"},
+      {"nome": "Igiene Dentale (Pulizia dei denti)", "prezzo": "70€"},
+      {"nome": "Sbiancamento Dentale LED", "prezzo": "180€"},
+      {"nome": "Otturazione Estetica", "prezzo": "da 90€"},
+      {"nome": "Impianto Dentale Singolo", "prezzo": "da 750€"}
+    ],
+    "gestione_urgenze": "In caso di forte dolore o urgenza, garantiamo l'inserimento prioritario in giornata.",
+    "regole_assistente": [
+      "Sii sempre empatico, professionale e cortese.",
+      "NON fare MAI diagnosi mediche. Invita sempre il paziente a prenotare una visita in clinica.",
+      "Se il paziente vuole prenotare o ha un'urgenza, chiedi: Nome, Cognome, Motivo della visita e Orario preferito."
+    ]
+  }
+}
