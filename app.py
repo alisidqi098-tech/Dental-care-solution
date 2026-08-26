@@ -83,8 +83,16 @@ def carica_dati_clinica(id_clinica="dental_care_demo"):
             database = json.load(f)
             return database.get(id_clinica, {})
     except Exception as e:
-        print(f"❌ Errore caricamento database_cliniche.json: {e}")
-        return {}
+        print(f"⚠️ Warning: database_cliniche.json non trovato ({e}). Uso configurazione di fallback.")
+        
+        return {
+            "nome": "Dental Care Studio",
+            "indirizzo": "Via Roma 1",
+            "telefono": "+39 06 1234567",
+            "orari": "Lun-Ven 09:00 - 19:00",
+            "servizi": [{"nome": "Visita Generale", "prezzo": "50€"}],
+            "regole_assistente": ["Sii cortese e professionale"]
+        }
 
 def genera_system_prompt(dati_clinica):
     servizi_str = "\n".join([f"- {s['nome']}: {s['prezzo']}" for s in dati_clinica.get("servizi", [])])
