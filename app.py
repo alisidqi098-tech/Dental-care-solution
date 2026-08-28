@@ -156,45 +156,18 @@ def whatsapp_webhook():
     dati_clinica = carica_dati_clinica("dental_care_demo")
     system_prompt_text = genera_system_prompt(dati_clinica)
 
-    modello = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
-        system_instruction=system_prompt_text,
-        tools=[salva_prenotazione_tool]
-    )
-
-    if numero_mittente not in cronologia_chat:
-        cronologia_chat[numero_mittente] = modello.start_chat(history=[])
-
-    chat = cronologia_chat[numero_mittente]
-
     try:
+        modello = genai.GenerativeModel(
+            model_name='gemini-2.0-flash',
+            system_instruction=system_prompt_text,
+            tools=[salva_prenotazione]
+        )
+
+        if numero_mittente not in cronologia_chat:
+            cronologia_chat[numero_mittente] = modello.start_chat(enable_automatic_function_calling=True)
+
+        chat = cronologia_chat[numero_mittente]
         response = chat.send_message(messaggio_utente)
-
-        if response.candidates and response.candidates[0].content.parts:
-            for part in response.candidates[0].content.parts:
-                if part.function_call:
-                    call = part.function_call
-                    if call.name == "salva_prenotazione":
-                        args = dict(call.args)
-                        risultato = salva_prenotazione(
-                            numero_telefono=numero_mittente,
-                            nome_cognome=args.get("nome_cognome"),
-                            motivo=args.get("motivo"),
-                            data_ora=args.get("data_ora")
-                        )
-                        response = chat.send_message(
-                            genai.protos.Content(
-                                parts=[
-                                    genai.protos.Part(
-                                        function_response=genai.protos.FunctionResponse(
-                                            name='salva_prenotazione',
-                                            response={'result': risultato}
-                                        )
-                                    )
-                                ]
-                            )
-                        )
-
         risposta_ia = response.text
 
     except Exception as e:
