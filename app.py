@@ -1,33 +1,18 @@
 import os
 import json
-import threading
 import sqlite3
-import datetime
-import jwt
-import stripe
-from functools import wraps
-from werkzeug.security import generate_password_hash, check_password_hash
+import google.generativeai as genai
 from flask import Flask, request, jsonify, render_template
-from groq import Groq
 from twilio.twiml.messaging_response import MessagingResponse
-from twilio.rest import Client
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente (.env)
 load_dotenv()
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# CONFIGURAZIONI SICUREZZA E INTEGRAZIONI
-app.config['SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "chiave_segreta_default_2026")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
-ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "studio2026"))
-
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "whatsapp:+14155238886")
+# Configurazione Gemini API
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 cronologia_chat = {}
 
@@ -50,8 +35,10 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Eseguiamo la creazione della tabella all'avvio del server
 init_db()
 
+# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU SQLITE ---
 def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     try:
         conn = sqlite3.connect('studio.db')
@@ -69,53 +56,21 @@ def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
         return "Errore interno durante il salvataggio."
 
 # ==============================================================================
-# 🔒 DECORATORE PER PROTEGGERE LE ROTTE SENSIBILI
+# 🛠️ TOOL PER GEMINI E FUNZIONI CLINICA
 # ==============================================================================
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if 'Authorization' in request.headers:
-            auth_header = request.headers['Authorization']
-            if auth_header.startswith("Bearer "):
-                token = auth_header.split(" ")[1]
-
-        if not token:
-            return jsonify({'message': 'Accesso negato: Token mancante!'}), 401
-
-        try:
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            current_user = data['user']
-        except jwt.ExpiredSignatureError:
-            return jsonify({'message': 'Sessione scaduta: Effettua nuovamente il login.'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'message': 'Token non valido!'}), 401
-
-        return f(current_user, *args, **kwargs)
-
-    return decorated
-
-# ==============================================================================
-# 🛠️ TOOL PER GROQ E FUNZIONI CLINICA
-# ==============================================================================
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "salva_prenotazione",
-            "description": "Registra la richiesta di appuntamento dopo aver ottenuto nome, cognome, motivo e data/ora preferita.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "nome_cognome": {"type": "string", "description": "Nome e cognome del paziente"},
-                    "motivo": {"type": "string", "description": "Motivo della visita o trattamento"},
-                    "data_ora": {"type": "string", "description": "Data e/o orario preferito per l'appuntamento"}
-                },
-                "required": ["nome_cognome", "motivo", "data_ora"]
-            }
-        }
+salva_prenotazione_tool = {
+    'name': 'salva_prenotazione',
+    'description': 'Registra la richiesta di appuntamento dopo aver ottenuto nome, cognome, motivo e data/ora preferita.',
+    'parameters': {
+        'type': 'OBJECT',
+        'properties': {
+            'nome_cognome': {'type': 'STRING', 'description': 'Nome e cognome del paziente'},
+            'motivo': {'type': 'STRING', 'description': 'Motivo della visita o trattamento'},
+            'data_ora': {'type': 'STRING', 'description': 'Data e/o orario preferito per l\'appuntamento'}
+        },
+        'required': ['nome_cognome', 'motivo', 'data_ora']
     }
-]
+}
 
 def carica_dati_clinica(id_clinica="dental_care_demo"):
     try:
@@ -123,15 +78,8 @@ def carica_dati_clinica(id_clinica="dental_care_demo"):
             database = json.load(f)
             return database.get(id_clinica, {})
     except Exception as e:
-        print(f"⚠️ Warning: database_cliniche.json non trovato ({e}). Uso configurazione di fallback.")
-        return {
-            "nome": "Dental Care Studio",
-            "indirizzo": "Via Roma 1",
-            "telefono": "+39 06 1234567",
-            "orari": "Lun-Ven 09:00 - 19:00",
-            "servizi": [{"nome": "Visita Generale", "prezzo": "50€"}],
-            "regole_assistente": ["Sii cortese e professionale"]
-        }
+        print(f"❌ Errore caricamento database_cliniche.json: {e}")
+        return {}
 
 def genera_system_prompt(dati_clinica):
     servizi_str = "\n".join([f"- {s['nome']}: {s['prezzo']}" for s in dati_clinica.get("servizi", [])])
@@ -149,7 +97,7 @@ def genera_system_prompt(dati_clinica):
         f"- Quando un paziente vuole prenotare, richiedi Nome, Cognome, Motivo e Data/Ora preferita.\n"
         f"- Quando hai TUTTE queste informazioni, usa lo strumento 'salva_prenotazione' per registrare la richiesta."
     )
-    return {"role": "system", "content": prompt}
+    return prompt
 
 # ==============================================================================
 # 🌐 ROTTE WEB E DASHBOARD
@@ -164,24 +112,17 @@ def login():
     data = request.get_json() or {}
     email = data.get('email', '')
     password = data.get('password', '')
+    
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@studio.it")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "studio2026")
 
-    if email == ADMIN_EMAIL and check_password_hash(ADMIN_PASSWORD_HASH, password):
-        token = jwt.encode({
-            'user': email,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=8)
-        }, app.config['SECRET_KEY'], algorithm="HS256")
-
-        return jsonify({
-            "status": "success",
-            "token": token,
-            "expires_in": "8h"
-        }), 200
-
+    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+        return jsonify({"status": "success", "token": "sessione_valida_medico_2026"}), 200
+    
     return jsonify({"status": "error", "message": "Credenziali errate"}), 401
 
 @app.route('/api/prenotazioni', methods=['GET'])
-@token_required
-def api_prenotazioni(current_user):
+def api_prenotazioni():
     try:
         conn = sqlite3.connect('studio.db')
         conn.row_factory = sqlite3.Row 
@@ -203,58 +144,7 @@ def live_stats():
     })
 
 # ==============================================================================
-# 💳 ROTTE PAGAMENTI STRIPE E NOTIFICHE TWILIO
-# ==============================================================================
-@app.route('/api/crea-sessione-pagamento', methods=['POST'])
-@token_required
-def crea_sessione_pagamento(current_user):
-    try:
-        data = request.get_json() or {}
-        servizio = data.get('servizio', 'Visita Odontoiatrica')
-        prezzo_euro = float(data.get('prezzo', 50.00))
-
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'eur',
-                    'product_data': {'name': servizio},
-                    'unit_amount': int(prezzo_euro * 100),
-                },
-                'quantity': 1,
-            }],
-            mode='payment',
-            success_url=request.host_url + 'dashboard?status=success',
-            cancel_url=request.host_url + 'dashboard?status=cancel',
-        )
-        return jsonify({'url': session.url}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/invia-promemoria', methods=['POST'])
-@token_required
-def invia_promemoria(current_user):
-    try:
-        data = request.get_json() or {}
-        telefono = data.get('telefono')
-        nome = data.get('nome')
-        data_ora = data.get('data_ora')
-
-        client_twilio = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        messaggio = f"Ciao {nome}, ti ricordiamo il tuo appuntamento presso Dental Care Studio per il {data_ora}."
-        destinatario = telefono if telefono.startswith("whatsapp:") else f"whatsapp:{telefono}"
-        
-        message = client_twilio.messages.create(
-            body=messaggio,
-            from_=TWILIO_PHONE_NUMBER,
-            to=destinatario
-        )
-        return jsonify({'status': 'inviato', 'sid': message.sid}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ==============================================================================
-# 📩 WEBHOOK WHATSAPP (TWILIO + GROQ)
+# 📩 WEBHOOK WHATSAPP (TWILIO + GEMINI)
 # ==============================================================================
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
@@ -264,60 +154,51 @@ def whatsapp_webhook():
     print(f"\n📩 Messaggio da {numero_mittente}: {messaggio_utente}")
 
     dati_clinica = carica_dati_clinica("dental_care_demo")
-    system_prompt = genera_system_prompt(dati_clinica)
+    system_prompt_text = genera_system_prompt(dati_clinica)
+
+    modello = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        system_instruction=system_prompt_text,
+        tools=[salva_prenotazione_tool]
+    )
 
     if numero_mittente not in cronologia_chat:
-        cronologia_chat[numero_mittente] = []
+        cronologia_chat[numero_mittente] = modello.start_chat(history=[])
 
-    cronologia_chat[numero_mittente].append({"role": "user", "content": messaggio_utente})
-
-    if len(cronologia_chat[numero_mittente]) > 10:
-        cronologia_chat[numero_mittente] = cronologia_chat[numero_mittente][-10:]
-
-    messaggi_per_groq = [system_prompt] + cronologia_chat[numero_mittente]
+    chat = cronologia_chat[numero_mittente]
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messaggi_per_groq,
-            tools=tools,
-            tool_choice="auto"
-        )
+        response = chat.send_message(messaggio_utente)
 
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if part.function_call:
+                    call = part.function_call
+                    if call.name == "salva_prenotazione":
+                        args = dict(call.args)
+                        risultato = salva_prenotazione(
+                            numero_telefono=numero_mittente,
+                            nome_cognome=args.get("nome_cognome"),
+                            motivo=args.get("motivo"),
+                            data_ora=args.get("data_ora")
+                        )
+                        response = chat.send_message(
+                            genai.protos.Content(
+                                parts=[
+                                    genai.protos.Part(
+                                        function_response=genai.protos.FunctionResponse(
+                                            name='salva_prenotazione',
+                                            response={'result': risultato}
+                                        )
+                                    )
+                                ]
+                            )
+                        )
 
-        if tool_calls:
-            for tool_call in tool_calls:
-                if tool_call.function.name == "salva_prenotazione":
-                    args = json.loads(tool_call.function.arguments)
-                    risultato_salvataggio = salva_prenotazione(
-                        numero_telefono=numero_mittente,
-                        nome_cognome=args.get("nome_cognome"),
-                        motivo=args.get("motivo"),
-                        data_ora=args.get("data_ora")
-                    )
-                    
-                    messaggi_per_groq.append(response_message)
-                    messaggi_per_groq.append({
-                        "tool_call_id": tool_call.id,
-                        "role": "tool",
-                        "name": "salva_prenotazione",
-                        "content": risultato_salvataggio
-                    })
-
-            second_response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messaggi_per_groq
-            )
-            risposta_ia = second_response.choices[0].message.content
-        else:
-            risposta_ia = response_message.content
-
-        cronologia_chat[numero_mittente].append({"role": "assistant", "content": risposta_ia})
+        risposta_ia = response.text
 
     except Exception as e:
-        print(f"❌ Errore durante l'elaborazione: {e}")
+        print(f"❌ Errore durante l'elaborazione Gemini: {e}")
         risposta_ia = "Ci dispiace, si è verificato un problema momentaneo. Riprova tra poco!"
 
     resp = MessagingResponse()
