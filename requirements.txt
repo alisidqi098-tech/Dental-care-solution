@@ -1,6 +1,6 @@
 flask 
 gunicorn 
-groq 
+google-generativeai
 twilio
 python-dotenv
 stripe
