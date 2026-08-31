@@ -1,6 +1,7 @@
 import os
 import json
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import google.generativeai as genai
 from flask import Flask, request, jsonify, render_template
 from twilio.twiml.messaging_response import MessagingResponse
@@ -17,42 +18,54 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 cronologia_chat = {}
 
 # ==============================================================================
-# 🗄️ CONFIGURAZIONE DATABASE SQLITE
+# 🗄️ CONFIGURAZIONE DATABASE POSTGRESQL (NEON / SUPABASE)
 # ==============================================================================
+def get_db_connection():
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise ValueError("Variabile DATABASE_URL non impostata.")
+    return psycopg2.connect(db_url)
+
 def init_db():
-    conn = sqlite3.connect('studio.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS prenotazioni (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telefono TEXT,
-            nome_cognome TEXT,
-            motivo TEXT,
-            data_ora TEXT,
-            stato TEXT DEFAULT 'In attesa di conferma'
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # PostgreSQL usa SERIAL invece di AUTOINCREMENT e VARCHAR/TEXT
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS prenotazioni (
+                id SERIAL PRIMARY KEY,
+                telefono VARCHAR(50),
+                nome_cognome VARCHAR(255),
+                motivo TEXT,
+                data_ora VARCHAR(255),
+                stato VARCHAR(50) DEFAULT 'In attesa di conferma'
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print("✅ Database PostgreSQL inizializzato con successo.")
+    except Exception as e:
+        print(f"❌ Errore durante l'inizializzazione del DB: {e}")
 
 # Eseguiamo la creazione della tabella all'avvio del server
 init_db()
 
-# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU SQLITE ---
+# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU POSTGRESQL ---
 def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     try:
-        conn = sqlite3.connect('studio.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
+        # PostgreSQL usa %s come placeholder, non i ? di SQLite
         cursor.execute('''
             INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         ''', (numero_telefono, nome_cognome, motivo, data_ora))
         conn.commit()
         conn.close()
         print(f"\n🎉 PRENOTAZIONE REGISTRATA NEL DB: {nome_cognome} ({data_ora})\n")
         return f"Prenotazione registrata con successo nel sistema per {nome_cognome}."
     except Exception as e:
-        print(f"Errore nel salvataggio DB: {e}")
+        print(f"❌ Errore nel salvataggio DB: {e}")
         return "Errore interno durante il salvataggio."
 
 # ==============================================================================
@@ -124,9 +137,9 @@ def login():
 @app.route('/api/prenotazioni', methods=['GET'])
 def api_prenotazioni():
     try:
-        conn = sqlite3.connect('studio.db')
-        conn.row_factory = sqlite3.Row 
-        cursor = conn.cursor()
+        conn = get_db_connection()
+        # DictCursor permette a Flask di convertire le righe direttamente in JSON, simile a sqlite3.Row
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
         rows = cursor.fetchall()
         conn.close()
