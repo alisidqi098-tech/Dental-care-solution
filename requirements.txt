@@ -5,3 +5,4 @@ twilio
 python-dotenv
 stripe
 PyJWT
+psycopg2-binary
