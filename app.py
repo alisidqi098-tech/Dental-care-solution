@@ -1,10 +1,10 @@
 import os
 import json
+import requests
 import psycopg2
 import psycopg2.extras
 import google.generativeai as genai
-from flask import Flask, request, jsonify, render_template
-from twilio.twiml.messaging_response import MessagingResponse
+from flask import Flask, requests, jsonify, render_template
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente (.env)
@@ -156,16 +156,30 @@ def live_stats():
         "transactions": 14
     })
 
+import requests
+
 # ==============================================================================
-# 📩 WEBHOOK WHATSAPP (TWILIO + GEMINI)
+# 📩 WEBHOOK WHATSAPP (GREEN API)
 # ==============================================================================
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
-    messaggio_utente = request.form.get('Body', '').strip()
-    numero_mittente = request.form.get('From', '')
+    # 1. Ricezione dati da Green API
+    data = request.get_json()
     
+    # Ignora notifiche di stato, accetta solo messaggi di testo
+    if not data or data.get('typeWebhook') != 'incomingMessageReceived':
+        return jsonify({"status": "ignored"}), 200
+        
+    try:
+        messaggio_utente = data['messageData']['textMessageData']['textMessage']
+        numero_mittente = data['senderData']['sender'] 
+    except KeyError:
+        # Se non è un messaggio di testo (es. immagine), ignoriamo per ora
+        return jsonify({"status": "no_text"}), 200
+
     print(f"\n📩 Messaggio da {numero_mittente}: {messaggio_utente}")
 
+    # 2. Logica Gemini
     dati_clinica = carica_dati_clinica("dental_care_demo")
     system_prompt_text = genera_system_prompt(dati_clinica)
 
@@ -184,18 +198,27 @@ def whatsapp_webhook():
         risposta_ia = response.text
 
     except Exception as e:
-        print(f"❌ Errore durante l'elaborazione Gemini: {e}")
-        risposta_ia = "Ci dispiace, si è verificato un problema momentaneo. Riprova tra poco!"
+        print(f"❌ Errore Gemini: {e}")
+        risposta_ia = "Sistema in aggiornamento, riprova tra poco."
 
-    resp = MessagingResponse()
-    resp.message(risposta_ia)
-
+    # =======================================================
+    # 3. QUI VANNO ID E TOKEN PER RISPONDERE
+    # =======================================================
+    ID_ISTANZA = "710722725565"
+    API_TOKEN = "fa0638935257436b88c29d9f6d731a684735faf1946d4d5793"
+    
+    url = f"https://api.green-api.com/waInstance{ID_ISTANZA}/sendMessage/{API_TOKEN}"
+    payload = {
+        "chatId": numero_mittente,
+        "message": risposta_ia
+    }
+    
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    
+    # Invio la risposta su WhatsApp
+    requests.post(url, json=payload, headers=headers)
     print(f"🤖 Risposta inviata al paziente:\n{risposta_ia}\n")
 
-    return str(resp), 200, {'Content-Type': 'text/xml'}
-
-# ==============================================================================
-# 🚀 AVVIO SERVER
-# ==============================================================================
-if __name__ == '__main__':
-    app.run(port=5000, debug=True, use_reloader=False)
+    return jsonify({"status": "success"}), 200
