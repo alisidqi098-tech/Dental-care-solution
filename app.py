@@ -1,10 +1,10 @@
 import os
 import json
-import requests
 import psycopg2
 import psycopg2.extras
 import google.generativeai as genai
-from flask import Flask, requests, jsonify, render_template
+import requests
+from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente (.env)
