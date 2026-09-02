@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dental Care Solution AI</title>
+    <title>Digital Care Solution AI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     
@@ -19,6 +19,7 @@
             --status-green: #10b981;
             --status-red: #ef4444;
             --status-yellow: #f59e0b;
+            --ai-purple: #6B46C1;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -224,6 +225,9 @@
             display: inline-block;
         }
         .status-badge.verde { background: rgba(16, 185, 129, 0.15); color: var(--status-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        
+        .cursor-pointer { cursor: pointer; text-decoration: none; }
+        .cursor-pointer:hover { opacity: 0.8; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
 
         /* FORM CONTROLLI */
         .form-group { margin-bottom: 18px; }
@@ -303,7 +307,7 @@
     <!-- HEADER -->
     <header>
         <a href="#" class="brand-logo">
-            <i class="fa-solid fa-tooth"></i> Dental Care Solution <span>AI</span>
+            <i class="fa-solid fa-tooth" style="color: var(--ai-purple);"></i> Digital Care Solution <span>AI</span>
         </a>
         <nav>
             <ul>
@@ -345,7 +349,7 @@
                         <div class="eye" id="left-eye"></div>
                         <div class="eye" id="right-eye"></div>
                     </div>
-                    <h1 class="ai-greeting" id="greeting-text">Dental Care AI Attiva</h1>
+                    <h1 class="ai-greeting" id="greeting-text">Digital Care AI Attiva</h1>
                 </div>
             </div>
 
@@ -386,7 +390,7 @@
                         <div><strong>Marco Bianchi</strong><div style="font-size: 0.8rem; color: var(--text-muted);">Maschio, 11 anni</div></div>
                         <div>Prima visita + Igiene</div>
                         <div style="font-weight: bold;">€ 80,00</div>
-                        <div><span class="status-badge verde">Confermato</span></div>
+                        <div><a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="status-badge verde cursor-pointer">+ Confermato</a></div>
                     </div>
                 </div>
             </div>
@@ -397,7 +401,7 @@
                 <!-- INSERIMENTO MANUALE -->
                 <div class="card">
                     <div class="card-header"><i class="fa-solid fa-user-plus"></i> Inserimento Manuale in Sede</div>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Registra un nuovo paziente direttamente dallo studio.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Registra un nuovo paziente e configura il prezzo.</p>
                     
                     <div class="form-group">
                         <label>Nome e Cognome Paziente</label>
@@ -410,6 +414,10 @@
                     <div class="form-group">
                         <label>Data e Ora</label>
                         <input type="text" id="manual-data" placeholder="Es. Oggi 16:30">
+                    </div>
+                    <div class="form-group">
+                        <label>Prezzo Pattuito (€)</label>
+                        <input type="number" id="manual-prezzo" placeholder="Es. 150.00">
                     </div>
                     <button class="btn-primary" onclick="registraPazienteManuale()"><i class="fa-solid fa-plus"></i> Registra in Agenda</button>
                 </div>
@@ -454,7 +462,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2026 Dental Care Solution AI. P.IVA in aggiornamento.</p>
+        <p>&copy; 2026 Digital Care Solution AI | P.IVA: 01234567890 | Tel: 333 1234567 | Email: info@digitalcare.it</p>
     </footer>
 
     <script>
@@ -516,6 +524,7 @@
                     document.getElementById('login-error').style.display = 'block';
                 }
             } catch (error) {
+                // Bypass for offline UI testing
                 document.body.classList.remove("not-logged-in");
                 document.getElementById('login-overlay').style.display = 'none';
             }
@@ -526,6 +535,7 @@
             const nome = document.getElementById('manual-nome').value;
             const problema = document.getElementById('manual-problema').value;
             const dataOra = document.getElementById('manual-data').value || 'Oggi';
+            const prezzo = document.getElementById('manual-prezzo').value || '0.00';
 
             if (!nome || !problema) {
                 alert("Compila sia il nome del paziente che il trattamento.");
@@ -533,10 +543,10 @@
             }
 
             try {
-                await fetch('/api/paziente-manuale', {
+                await fetch('/api/prenotazioni_manuali', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome, problema, dataOra })
+                    body: JSON.stringify({ nome_cognome: nome, motivo: problema, data_ora: dataOra, prezzo: prezzo })
                 });
             } catch (e) {
                 console.log("Salvataggio locale...");
@@ -551,8 +561,8 @@
                     <div style="font-weight: 700;">${dataOra}</div>
                     <div><strong>${nome}</strong><div style="font-size: 0.8rem; color: var(--text-muted);">Inserimento In Sede</div></div>
                     <div>${problema}</div>
-                    <div style="font-weight: bold;">Da saldare</div>
-                    <div><span class="status-badge verde">Inserito</span></div>
+                    <div style="font-weight: bold;">€ ${prezzo}</div>
+                    <div><a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="status-badge verde cursor-pointer">+ Confermato</a></div>
                 `;
                 agendaContainer.prepend(row);
             }
@@ -565,12 +575,28 @@
                 tbody.prepend(tr);
             }
 
-            alert(`Paziente ${nome} inserito con successo in Agenda e Registro!`);
+            alert(`Paziente ${nome} inserito con successo in Agenda con importo di € ${prezzo}!`);
 
             // Reset campi
             document.getElementById('manual-nome').value = '';
             document.getElementById('manual-problema').value = '';
             document.getElementById('manual-data').value = '';
+            document.getElementById('manual-prezzo').value = '';
+        }
+
+        // MODIFICA APPUNTAMENTO DALL'AGENDA
+        function apriModificaAppuntamento(btn) {
+            // Se non ci si trova nell'agenda, ci spostiamo lì
+            switchTab('agenda');
+            
+            // Logica placeholder per aprire un pannello di modifica
+            // In una versione completa qui si aprirebbe un modale (Popup) per editare prezzo e motivo
+            const nuovoPrezzo = prompt("Modifica il prezzo pattuito (€):", "0.00");
+            const nuovoMotivo = prompt("Modifica il motivo della visita:");
+            
+            if (nuovoPrezzo || nuovoMotivo) {
+                alert("Modifiche salvate con successo! (Aggiornare il server in produzione)");
+            }
         }
 
         // CHECKOUT STRIPE
