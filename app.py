@@ -185,7 +185,7 @@ def whatsapp_webhook():
 
     try:
         modello = genai.GenerativeModel(
-            model_name='gemini-3.0-flash',
+            model_name='gemini-3.5-flash',
             system_instruction=system_prompt_text,
             tools=[salva_prenotazione]
         )
