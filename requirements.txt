@@ -1,8 +1,8 @@
 flask 
 gunicorn 
 google-generativeai
-twilio
 python-dotenv
 stripe
 PyJWT
 psycopg2-binary
+requests
