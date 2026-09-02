@@ -4,7 +4,8 @@ import psycopg2
 import psycopg2.extras
 import google.generativeai as genai
 import requests
-from flask import Flask, request, jsonify, render_template
+import csv
+from flask import Flask, request, jsonify, render_template, Response
 from dotenv import load_dotenv
 
 # Carica variabili d'ambiente (.env)
@@ -30,7 +31,8 @@ def init_db():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # PostgreSQL usa SERIAL invece di AUTOINCREMENT e VARCHAR/TEXT
+        
+        # Creazione tabella con la nuova colonna "prezzo"
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS prenotazioni (
                 id SERIAL PRIMARY KEY,
@@ -38,24 +40,31 @@ def init_db():
                 nome_cognome VARCHAR(255),
                 motivo TEXT,
                 data_ora VARCHAR(255),
-                stato VARCHAR(50) DEFAULT 'In attesa di conferma'
+                stato VARCHAR(50) DEFAULT 'In attesa di conferma',
+                prezzo DECIMAL(10,2) DEFAULT 0.00
             )
         ''')
+        
+        # Tenta di aggiungere la colonna 'prezzo' se la tabella esisteva già senza
+        try:
+            cursor.execute('ALTER TABLE prenotazioni ADD COLUMN prezzo DECIMAL(10,2) DEFAULT 0.00;')
+        except psycopg2.errors.DuplicateColumn:
+            pass # La colonna esiste già, tutto ok
+            
         conn.commit()
         conn.close()
-        print("✅ Database PostgreSQL inizializzato con successo.")
+        print("✅ Database PostgreSQL inizializzato/aggiornato con successo.")
     except Exception as e:
         print(f"❌ Errore durante l'inizializzazione del DB: {e}")
 
-# Eseguiamo la creazione della tabella all'avvio del server
+# Eseguiamo la creazione/aggiornamento della tabella all'avvio
 init_db()
 
-# --- FUNZIONE PER SALVARE LA PRENOTAZIONE SU POSTGRESQL ---
+# --- FUNZIONE PER SALVARE LA PRENOTAZIONE DA WHATSAPP ---
 def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        # PostgreSQL usa %s come placeholder, non i ? di SQLite
         cursor.execute('''
             INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora)
             VALUES (%s, %s, %s, %s)
@@ -91,18 +100,21 @@ def carica_dati_clinica(id_clinica="dental_care_demo"):
             database = json.load(f)
             return database.get(id_clinica, {})
     except Exception as e:
-        print(f"❌ Errore caricamento database_cliniche.json: {e}")
+        print(f"❌ Errore caricamento database: {e}")
         return {}
 
 def genera_system_prompt(dati_clinica):
     servizi_str = "\n".join([f"- {s['nome']}: {s['prezzo']}" for s in dati_clinica.get("servizi", [])])
     regole_str = "\n".join([f"- {r}" for r in dati_clinica.get("regole_assistente", [])])
 
+    # Inserisci qui i dati della foto (Telefono, Email, P.IVA)
     prompt = (
-        f"Sei l'assistente virtuale ufficiale della clinica '{dati_clinica.get('nome')}'.\n\n"
+        f"Sei l'assistente virtuale ufficiale della clinica 'Digital Care Solution AI'.\n\n"
         f"INFORMAZIONI CLINICA:\n"
-        f"- Indirizzo: {dati_clinica.get('indirizzo')}\n"
-        f"- Telefono: {dati_clinica.get('telefono')}\n"
+        f"- Indirizzo: {dati_clinica.get('indirizzo', 'Via Roma 1, Milano')}\n"
+        f"- Telefono: 333 1234567\n" 
+        f"- Email: info@digitalcare.it\n"
+        f"- Partita IVA: 01234567890\n"
         f"- Orari: {dati_clinica.get('orari')}\n"
         f"- Urgenze: {dati_clinica.get('gestione_urgenze')}\n\n"
         f"LISTINO SERVIZI:\n{servizi_str}\n\n"
@@ -138,35 +150,59 @@ def login():
 def api_prenotazioni():
     try:
         conn = get_db_connection()
-        # DictCursor permette a Flask di convertire le righe direttamente in JSON, simile a sqlite3.Row
         cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
         rows = cursor.fetchall()
         conn.close()
         
-        lista_prenotazioni = [dict(row) for row in rows]
-        return jsonify(lista_prenotazioni), 200
+        return jsonify([dict(row) for row in rows]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# NUOVA ROTTA: Aggiunta manuale dalla dashboard (con prezzo)
+@app.route('/api/prenotazioni_manuali', methods=['POST'])
+def aggiungi_manuale():
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora, prezzo, stato)
+            VALUES (%s, %s, %s, %s, %s, 'Confermato')
+        ''', (data.get('telefono', ''), data['nome_cognome'], data['motivo'], data['data_ora'], data.get('prezzo', 0.00)))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# EXTRA PRO: Esportazione CSV per commercialista/contabilità
+@app.route('/api/export-csv')
+def export_csv():
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
+
+    def generate():
+        data = ["ID,Telefono,Paziente,Motivo,Data,Stato,Prezzo_Euro\n"]
+        for r in rows:
+            data.append(f"{r['id']},{r['telefono']},{r['nome_cognome']},{r['motivo']},{r['data_ora']},{r['stato']},{r['prezzo']}\n")
+        return "".join(data)
+    
+    return Response(generate(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=pazienti_digital_care.csv"})
+
 @app.route('/api/live-stats', methods=['GET'])
 def live_stats():
-    return jsonify({
-        "revenue": 4850.00,
-        "transactions": 14
-    })
-
-import requests
+    return jsonify({"revenue": 4850.00, "transactions": 14})
 
 # ==============================================================================
 # 📩 WEBHOOK WHATSAPP (GREEN API)
 # ==============================================================================
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
-    # 1. Ricezione dati da Green API
     data = request.get_json()
-    
-    # Ignora notifiche di stato, accetta solo messaggi di testo
     if not data or data.get('typeWebhook') != 'incomingMessageReceived':
         return jsonify({"status": "ignored"}), 200
         
@@ -174,12 +210,8 @@ def whatsapp_webhook():
         messaggio_utente = data['messageData']['textMessageData']['textMessage']
         numero_mittente = data['senderData']['sender'] 
     except KeyError:
-        # Se non è un messaggio di testo (es. immagine), ignoriamo per ora
         return jsonify({"status": "no_text"}), 200
 
-    print(f"\n📩 Messaggio da {numero_mittente}: {messaggio_utente}")
-
-    # 2. Logica Gemini
     dati_clinica = carica_dati_clinica("dental_care_demo")
     system_prompt_text = genera_system_prompt(dati_clinica)
 
@@ -198,27 +230,14 @@ def whatsapp_webhook():
         risposta_ia = response.text
 
     except Exception as e:
-        print(f"❌ Errore Gemini: {e}")
         risposta_ia = "Sistema in aggiornamento, riprova tra poco."
 
-    # =======================================================
-    # 3. QUI VANNO ID E TOKEN PER RISPONDERE
-    # =======================================================
     ID_ISTANZA = "710722725565"
     API_TOKEN = "fa0638935257436b88c29d9f6d731a684735faf1946d4d5793"
     
     url = f"https://api.green-api.com/waInstance{ID_ISTANZA}/sendMessage/{API_TOKEN}"
-    payload = {
-        "chatId": numero_mittente,
-        "message": risposta_ia
-    }
-    
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    
-    # Invio la risposta su WhatsApp
+    payload = {"chatId": numero_mittente, "message": risposta_ia}
+    headers = {'Content-Type': 'application/json'}
     requests.post(url, json=payload, headers=headers)
-    print(f"🤖 Risposta inviata al paziente:\n{risposta_ia}\n")
 
     return jsonify({"status": "success"}), 200
