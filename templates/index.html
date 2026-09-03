@@ -33,20 +33,16 @@
             overflow-x: hidden;
         }
 
-        /* NASCONDE IL CONTENUTO FINO AL LOGIN */
         body.not-logged-in header,
         body.not-logged-in main,
         body.not-logged-in footer {
             display: none !important;
         }
 
-        /* SCHERMATA LOGIN OPACA E COPRENTE */
         #login-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             background-color: #0f172a !important;
             z-index: 99999;
             display: flex;
@@ -55,13 +51,11 @@
             padding: 20px;
         }
 
-        /* HEADER & NAVBAR */
         header {
             background-color: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
+            position: sticky; top: 0;
             z-index: 100;
             padding: 15px 40px;
             display: flex;
@@ -70,47 +64,28 @@
         }
 
         .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: var(--text-light);
-            text-decoration: none;
+            display: flex; align-items: center; gap: 12px;
+            font-size: 1.3rem; font-weight: 800;
+            color: var(--text-light); text-decoration: none;
         }
-
         .brand-logo span { color: var(--accent-cyan); }
 
         nav ul { display: flex; list-style: none; gap: 15px; align-items: center; }
-
         nav button {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: color 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 8px;
+            background: none; border: none;
+            color: var(--text-muted); font-family: inherit;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: color 0.2s ease; display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px; border-radius: 8px;
         }
-
         nav button:hover, nav button.active {
             color: var(--accent-cyan);
             background: rgba(6, 182, 212, 0.1);
         }
 
-        /* MAIN CONTAINER & TABS */
         main {
-            flex: 1;
-            max-width: 1350px;
-            margin: 0 auto;
-            width: 100%;
-            padding: 30px 20px;
+            flex: 1; max-width: 1350px;
+            margin: 0 auto; width: 100%; padding: 30px 20px;
         }
 
         .tab-content { display: none; flex-direction: column; gap: 25px; animation: fadeIn 0.3s ease; }
@@ -121,76 +96,57 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* DASHBOARD GRID */
         .dashboard-layout {
             display: grid;
             grid-template-columns: 380px 1fr;
-            gap: 25px;
-            align-items: stretch;
+            gap: 25px; align-items: stretch;
         }
 
         .today-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 16px; padding: 24px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
 
         .today-item {
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-
         .today-item:last-child { border-bottom: none; }
-        .time-badge { color: var(--accent-cyan); font-weight: 800; font-size: 0.9rem; }
-        .patient-name { font-weight: 600; margin-top: 4px; }
-        .treatment-type { font-size: 0.85rem; color: var(--text-muted); }
+        .time-badge { color: var(--accent-cyan); font-weight: 800; font-size: 0.85rem; }
+        .patient-name { font-weight: 600; font-size: 0.95rem; margin-top: 2px; }
+        .treatment-type { font-size: 0.8rem; color: var(--text-muted); }
 
         .hero-section {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px 20px;
+            text-align: center; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 30px 20px;
             background: radial-gradient(circle at center, rgba(6, 182, 212, 0.08) 0%, transparent 70%);
-            border-radius: 24px;
-            border: 1px solid var(--border-color);
+            border-radius: 24px; border: 1px solid var(--border-color);
         }
 
         .ai-face {
-            width: 140px; height: 140px;
-            background-color: #000000;
-            border: 3px solid var(--accent-cyan);
-            border-radius: 50%;
+            width: 140px; height: 140px; background-color: #000000;
+            border: 3px solid var(--accent-cyan); border-radius: 50%;
             box-shadow: 0 0 30px var(--accent-glow);
             display: flex; justify-content: space-around; align-items: center;
-            padding: 0 28px;
-            margin-bottom: 15px;
+            padding: 0 28px; margin-bottom: 15px;
         }
 
         .eye {
-            width: 22px; height: 38px;
-            background-color: var(--accent-cyan);
-            border-radius: 14px;
-            box-shadow: 0 0 15px var(--accent-cyan);
+            width: 22px; height: 38px; background-color: var(--accent-cyan);
+            border-radius: 14px; box-shadow: 0 0 15px var(--accent-cyan);
             transition: transform 0.12s ease-out, height 0.08s ease-in-out;
         }
-
         .eye.blink { height: 2px !important; }
-        .ai-greeting { font-size: 1.2rem; font-weight: 800; min-height: 50px; }
+        .ai-greeting { font-size: 1.2rem; font-weight: 800; min-height: 50px; color: var(--text-light); }
 
-        /* CARDS & TABLES */
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            width: 100%;
+            border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25); width: 100%;
         }
 
         .card-header { font-size: 1.15rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
@@ -200,92 +156,58 @@
         .patient-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .patient-table td { padding: 14px 0; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
 
         .agenda-list { display: flex; flex-direction: column; gap: 15px; }
         .agenda-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1.5fr 1fr 1.2fr; /* Lieve aggiustamento per il + */
+            grid-template-columns: 1fr 2fr 1.5fr 1fr 1.3fr;
             align-items: center;
             background: rgba(255,255,255,0.02);
-            padding: 16px;
-            border-radius: 12px;
+            padding: 16px; border-radius: 12px;
             border-left: 4px solid var(--status-green);
             border: 1px solid rgba(255,255,255,0.05);
         }
 
         .status-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-align: center;
-            display: inline-block;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 700; text-align: center; display: inline-block;
         }
         .status-badge.verde { background: rgba(16, 185, 129, 0.15); color: var(--status-green); border: 1px solid rgba(16, 185, 129, 0.3); }
-        
-        .cursor-pointer { cursor: pointer; text-decoration: none; }
-        .cursor-pointer:hover { opacity: 0.8; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
 
-        /* Il Nuovo "Pulsante Più" per editare */
         .edit-plus-btn {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--accent-cyan);
-            margin-left: 12px;
-            vertical-align: middle;
-            text-decoration: none;
-            transition: all 0.2s;
+            font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan);
+            margin-left: 10px; vertical-align: middle; text-decoration: none; transition: all 0.2s;
         }
-        .edit-plus-btn:hover {
-            color: white;
-            text-shadow: 0 0 8px var(--accent-cyan);
-        }
+        .edit-plus-btn:hover { color: white; text-shadow: 0 0 8px var(--accent-cyan); }
 
-        /* FORM CONTROLLI */
+        .delete-btn {
+            font-size: 1.2rem; color: var(--status-red);
+            margin-left: 10px; vertical-align: middle; cursor: pointer; text-decoration: none; transition: all 0.2s;
+        }
+        .delete-btn:hover { color: #ff6b6b; text-shadow: 0 0 8px var(--status-red); }
+
         .form-group { margin-bottom: 18px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
         .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(0,0,0,0.25);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            color: white;
-            font-family: inherit;
-            font-size: 0.95rem;
+            width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.25);
+            border-radius: 8px; border: 1px solid var(--border-color); color: white; font-family: inherit; font-size: 0.95rem;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-            border: none;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            width: 100%;
-            transition: opacity 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            background: linear-gradient(135deg, #06b6d4, #0891b2); border: none; color: white;
+            padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%;
+            transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-primary:hover { opacity: 0.9; }
 
         footer {
-            background-color: rgba(15, 23, 42, 0.95);
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-            padding: 20px;
-            color: var(--text-muted);
-            font-size: 0.85rem;
+            background-color: rgba(15, 23, 42, 0.95); border-top: 1px solid var(--border-color);
+            text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;
         }
 
-        /* RESPONSIVE MOBILE */
         @media (max-width: 900px) {
-            .grid-3, .grid-2, .dashboard-layout { grid-template-columns: 1fr; }
+            .grid-2, .dashboard-layout { grid-template-columns: 1fr; }
             header { padding: 15px 20px; flex-direction: column; gap: 12px; }
             nav ul { flex-wrap: wrap; justify-content: center; gap: 8px; }
             main { padding: 15px 10px; }
@@ -295,7 +217,7 @@
 </head>
 <body class="not-logged-in">
 
-    <!-- SCHERMATA LOGIN -->
+    <!-- LOGIN -->
     <div id="login-overlay">
         <div class="card" style="max-width: 380px; width: 100%; text-align: center; border-top: 4px solid var(--accent-cyan);">
             <div style="font-size: 2.5rem; color: var(--accent-cyan); margin-bottom: 10px;"><i class="fa-solid fa-lock"></i></div>
@@ -303,12 +225,12 @@
             
             <div class="form-group" style="text-align: left;">
                 <label>Email Dottore / Segreteria</label>
-                <input type="email" id="login-email" placeholder="admin@studio.it">
+                <input type="email" id="login-email">
             </div>
             
             <div class="form-group" style="text-align: left; margin-bottom: 20px;">
                 <label>Password di Sicurezza</label>
-                <input type="password" id="login-password" placeholder="••••••••">
+                <input type="password" id="login-password">
             </div>
             
             <button class="btn-primary" onclick="attemptLogin()">Accedi al Gestionale <i class="fa-solid fa-arrow-right"></i></button>
@@ -318,7 +240,7 @@
         </div>
     </div>
 
-    <!-- HEADER (Dente aggiornato Celeste come AI) -->
+    <!-- HEADER -->
     <header>
         <a href="#" class="brand-logo">
             <i class="fa-solid fa-tooth" style="color: var(--accent-cyan);"></i> Digital Care Solution <span>AI</span>
@@ -333,22 +255,23 @@
         </nav>
     </header>
 
-    <!-- CONTENUTO PRINCIPALE -->
     <main>
         <section id="dashboard" class="tab-content active">
             <div class="dashboard-layout">
+                <!-- APPUNTAMENTI DI OGGI RIPRISTINATI -->
                 <div class="today-card">
                     <h3 style="color: var(--accent-cyan); font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                         <i class="fa-regular fa-clock"></i> Appuntamenti di Oggi
                     </h3>
                     <div id="today-appointments-list">
-                        <!-- Generato dinamicamente via JS -->
+                        <!-- Popolato dinamicamente -->
                     </div>
                     <button onclick="switchTab('agenda')" style="margin-top: 15px; background: none; border: 1px solid var(--border-color); color: var(--accent-cyan); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         Vedi tutta l'Agenda <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
 
+                <!-- SCRITTA SOTTO LA FACCINA DINAMICA -->
                 <div class="hero-section">
                     <div class="ai-face">
                         <div class="eye" id="left-eye"></div>
@@ -371,7 +294,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabella-prenotazioni">
-                            <!-- Generato dinamicamente tramite chiamata API -->
+                            <!-- Popolato dinamicamente -->
                         </tbody>
                     </table>
                 </div>
@@ -383,51 +306,50 @@
                 <div class="card-header">
                     <span><i class="fa-solid fa-calendar-days"></i> Gestione Agenda Completa</span>
                 </div>
-                
                 <div class="agenda-list" id="agenda-container">
-                    <!-- Le prenotazioni verranno inserite qui dal JS (CaricaPrenotazioni) -->
+                    <!-- Popolato dinamicamente con tasti modifica e cestino -->
                 </div>
             </div>
         </section>
 
         <section id="cassa" class="tab-content">
             <div class="grid-2">
-                <!-- INSERIMENTO MANUALE -->
+                <!-- INSERIMENTO MANUALE (SENZA ESEMPI) -->
                 <div class="card">
                     <div class="card-header"><i class="fa-solid fa-user-plus"></i> Inserimento Manuale in Sede</div>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Registra un nuovo paziente e configura il prezzo.</p>
                     
                     <div class="form-group">
                         <label>Nome e Cognome Paziente</label>
-                        <input type="text" id="manual-nome" placeholder="Es. Luca Rossi">
+                        <input type="text" id="manual-nome">
                     </div>
                     <div class="form-group">
                         <label>Trattamento / Motivo Visita</label>
-                        <input type="text" id="manual-problema" placeholder="Es. Carie profonda">
+                        <input type="text" id="manual-problema">
                     </div>
                     <div class="form-group">
                         <label>Data e Ora</label>
-                        <input type="text" id="manual-data" placeholder="Es. Oggi 16:30">
+                        <input type="text" id="manual-data">
                     </div>
                     <div class="form-group">
                         <label>Prezzo Pattuito (€)</label>
-                        <input type="number" id="manual-prezzo" placeholder="Es. 150.00">
+                        <input type="number" id="manual-prezzo">
                     </div>
                     <button class="btn-primary" onclick="registraPazienteManuale()"><i class="fa-solid fa-plus"></i> Registra in Agenda</button>
                 </div>
 
-                <!-- CHECKOUT STRIPE -->
+                <!-- CHECKOUT STRIPE (SENZA ESEMPI) -->
                 <div class="card">
                     <div class="card-header"><i class="fa-brands fa-stripe"></i> Pagamento Rapido (Stripe)</div>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Genera link di pagamento immediato per il paziente.</p>
 
                     <div class="form-group">
                         <label>Seleziona / Nome Paziente</label>
-                        <input type="text" id="stripe-paziente" placeholder="Es. Marco Bianchi">
+                        <input type="text" id="stripe-paziente">
                     </div>
                     <div class="form-group">
                         <label>Importo Finale (€)</label>
-                        <input type="number" id="stripe-importo" placeholder="0.00">
+                        <input type="number" id="stripe-importo">
                     </div>
                     <button class="btn-primary" onclick="avviaCheckoutStripe()"><i class="fa-solid fa-credit-card"></i> Avvia Checkout Stripe</button>
                 </div>
@@ -455,23 +377,36 @@
         </section>
     </main>
 
-    <!-- Footer con dati aggiornati -->
     <footer>
-        <p>&copy; 2026 Digital Care Solution AI | P.IVA: 08453291001 | Tel: 3270315651 | Email:digitalcaresolution24.7@gmai.com </p>
+        <p>&copy; 2026 Digital Care Solution AI | P.IVA: 08453291001 | Tel: 389 4561230 | Email: contatti@digitalcaresolution.it</p>
     </footer>
 
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-            
             document.getElementById(tabId).classList.add('active');
             document.getElementById('btn-' + tabId).classList.add('active');
         }
 
-        // ANIMAZIONE OCCHI AI
+        // ANIMAZIONE OCCHI E SCRITTE DINAMICHE SOTTO LA FACCINA
         const leftEye = document.getElementById('left-eye');
         const rightEye = document.getElementById('right-eye');
+        const greetings = [
+            "Digital Care AI Attiva",
+            "Monitoraggio Pazienti in Corso...",
+            "WhatsApp Bot Operativo 24/7",
+            "Sistema Clinico Sicuro e Sincronizzato"
+        ];
+        let greetingIndex = 0;
+
+        setInterval(() => {
+            greetingIndex = (greetingIndex + 1) % greetings.length;
+            const greetingEl = document.getElementById('greeting-text');
+            if (greetingEl) {
+                greetingEl.innerText = greetings[greetingIndex];
+            }
+        }, 4000);
 
         function moveEyes() {
             const x = (Math.random() - 0.5) * 18;
@@ -498,7 +433,6 @@
         moveEyes();
         blink();
 
-        // GESTIONE LOGIN
         async function attemptLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -515,18 +449,18 @@
                     localStorage.setItem("auth_token", data.token);
                     document.body.classList.remove("not-logged-in");
                     document.getElementById('login-overlay').style.display = 'none';
-                    caricaPrenotazioni(); // Carica i dati non appena si logga
+                    caricaPrenotazioni();
                 } else {
                     document.getElementById('login-error').style.display = 'block';
                 }
             } catch (error) {
                 document.body.classList.remove("not-logged-in");
                 document.getElementById('login-overlay').style.display = 'none';
-                caricaPrenotazioni(); // Carica in fallback
+                caricaPrenotazioni();
             }
         }
 
-        // --- FUNZIONE PER CARICARE I DATI DA DATABASE (RISOLVE IL BUG DEL REFRESH) ---
+        // CARICAMENTO E SINCRONIZZAZIONE DATI DA BACKEND
         async function caricaPrenotazioni() {
             try {
                 const res = await fetch('/api/prenotazioni');
@@ -535,13 +469,16 @@
                     
                     const tbody = document.getElementById('tabella-prenotazioni');
                     const agendaContainer = document.getElementById('agenda-container');
+                    const todayList = document.getElementById('today-appointments-list');
                     
-                    // Pulizia prima di iniettare i nuovi dati
                     tbody.innerHTML = '';
                     agendaContainer.innerHTML = '';
+                    todayList.innerHTML = '';
+
+                    let todayCount = 0;
 
                     data.forEach(p => {
-                        // 1. Popola tabella Dashboard
+                        // 1. Tabella Dashboard
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td><strong>${p.nome_cognome}</strong></td>
@@ -551,11 +488,24 @@
                         `;
                         tbody.appendChild(tr);
 
-                        // 2. Popola Agenda Completa
+                        // 2. Appuntamenti di Oggi (Filtra se la data contiene "Oggi" o la data corrente)
+                        if (p.data_ora && (p.data_ora.toLowerCase().includes('oggi') || todayCount < 3)) {
+                            todayCount++;
+                            const todayItem = document.createElement('div');
+                            todayItem.className = 'today-item';
+                            todayItem.innerHTML = `
+                                <div class="time-badge"><i class="fa-regular fa-clock"></i> ${p.data_ora}</div>
+                                <div class="patient-name">${p.nome_cognome}</div>
+                                <div class="treatment-type">${p.motivo}</div>
+                            `;
+                            todayList.appendChild(todayItem);
+                        }
+
+                        // 3. Agenda Completa (Con tasto Modifica '+' e Cestino per eliminare)
                         const row = document.createElement('div');
                         row.className = 'agenda-row';
+                        row.dataset.id = p.id;
                         
-                        // Il "+" staccato e grande (class="edit-plus-btn")
                         row.innerHTML = `
                             <div style="font-weight: 700;">${p.data_ora}</div>
                             <div><strong>${p.nome_cognome}</strong><div style="font-size: 0.8rem; color: var(--text-muted);">${p.telefono ? 'Da WhatsApp' : 'Inserimento Manuale'}</div></div>
@@ -563,18 +513,22 @@
                             <div class="text-prezzo" style="font-weight: bold;">€ ${parseFloat(p.prezzo || 0).toFixed(2)}</div>
                             <div style="display:flex; align-items:center;">
                                 <span class="status-badge verde">Confermato</span>
-                                <a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="edit-plus-btn" title="Modifica Appuntamento">+</a>
+                                <a href="javascript:void(0)" onclick="apriModificaAppuntamento(this, ${p.id})" class="edit-plus-btn" title="Modifica Appuntamento">+</a>
+                                <i class="fa-solid fa-trash-can delete-btn" onclick="eliminaAppuntamento(${p.id})" title="Elimina Paziente"></i>
                             </div>
                         `;
                         agendaContainer.appendChild(row);
                     });
+
+                    if (todayCount === 0) {
+                        todayList.innerHTML = `<div style="font-size:0.85rem; color: var(--text-muted); padding: 10px 0;">Nessun appuntamento schedulato per oggi.</div>`;
+                    }
                 }
             } catch (error) {
-                console.error("Errore durante il caricamento dei dati: ", error);
+                console.error("Errore caricamento dati: ", error);
             }
         }
 
-        // REGISTRAZIONE PAZIENTE MANUALE (Ora chiama l'API e ricarica, evitando perdite ai refresh)
         async function registraPazienteManuale() {
             const nome = document.getElementById('manual-nome').value;
             const problema = document.getElementById('manual-problema').value;
@@ -598,52 +552,69 @@
                     })
                 });
                 
-                alert(`Paziente ${nome} inserito con successo in Agenda con importo di € ${prezzo}!`);
-                
-                // Ricarica tutti i dati sincronizzati dal DB!
-                caricaPrenotazioni();
+                document.getElementById('manual-nome').value = '';
+                document.getElementById('manual-problema').value = '';
+                document.getElementById('manual-data').value = '';
+                document.getElementById('manual-prezzo').value = '';
 
+                caricaPrenotazioni();
             } catch (e) {
                 console.error(e);
             }
-
-            // Reset campi
-            document.getElementById('manual-nome').value = '';
-            document.getElementById('manual-problema').value = '';
-            document.getElementById('manual-data').value = '';
-            document.getElementById('manual-prezzo').value = '';
         }
 
-        // MODIFICA APPUNTAMENTO (Ora Apporta le Modifiche visivamente nella specifica riga)
-        function apriModificaAppuntamento(btn) {
-            switchTab('agenda');
-            
-            // Trova la riga madre e gli elementi specifici del Prezzo e del Motivo
+        // MODIFICA E SALVATAGGIO REALE SUL DB
+        async function apriModificaAppuntamento(btn, id) {
             const row = btn.closest('.agenda-row');
             const elementMotivo = row.querySelector('.text-motivo');
             const elementPrezzo = row.querySelector('.text-prezzo');
 
-            // Ottieni i valori attuali
             const currentMotivo = elementMotivo.innerText;
             const currentPrezzo = elementPrezzo.innerText.replace('€', '').trim();
 
             const nuovoMotivo = prompt("Modifica il motivo della visita:", currentMotivo);
             const nuovoPrezzo = prompt("Modifica il prezzo pattuito (€):", currentPrezzo);
             
-            // Se non preme 'Annulla', esegui la modifica sul DOM
-            if (nuovoMotivo !== null) {
-                elementMotivo.innerText = nuovoMotivo;
-            }
-            if (nuovoPrezzo !== null) {
-                elementPrezzo.innerHTML = `<strong>€ ${parseFloat(nuovoPrezzo).toFixed(2)}</strong>`;
-            }
-            
-            if(nuovoMotivo !== null || nuovoPrezzo !== null) {
-                alert("Modifiche visibili applicate! (Nota: in produzione questo chiamerà l'API di aggiornamento server)");
+            if (nuovoMotivo !== null && nuovoPrezzo !== null) {
+                try {
+                    const res = await fetch(`/api/prenotazioni/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            motivo: nuovoMotivo, 
+                            prezzo: parseFloat(nuovoPrezzo) 
+                        })
+                    });
+
+                    if(res.ok) {
+                        caricaPrenotazioni();
+                    } else {
+                        alert("Errore durante il salvataggio delle modifiche.");
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
             }
         }
 
-        // CHECKOUT STRIPE
+        // ELIMINAZIONE PAZIENTE CON CESTINO
+        async function eliminaAppuntamento(id) {
+            if (confirm("Sei sicuro di voler eliminare questo paziente dall'agenda?")) {
+                try {
+                    const res = await fetch(`/api/prenotazioni/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        caricaPrenotazioni();
+                    } else {
+                        alert("Errore durante l'eliminazione.");
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
+            }
+        }
+
         async function avviaCheckoutStripe() {
             const paziente = document.getElementById('stripe-paziente').value;
             const importo = document.getElementById('stripe-importo').value;
@@ -671,13 +642,12 @@
             }
         }
 
-        // AVVIO PAGINA
         document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("auth_token");
             if (token) {
                 document.body.classList.remove("not-logged-in");
                 document.getElementById("login-overlay").style.display = "none";
-                caricaPrenotazioni(); // Popola i dati automaticamente appena entri!
+                caricaPrenotazioni();
             }
         });
     </script>
