@@ -19,7 +19,6 @@
             --status-green: #10b981;
             --status-red: #ef4444;
             --status-yellow: #f59e0b;
-            --ai-purple: #6B46C1;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -207,7 +206,7 @@
         .agenda-list { display: flex; flex-direction: column; gap: 15px; }
         .agenda-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1.5fr 1fr 1fr;
+            grid-template-columns: 1fr 2fr 1.5fr 1fr 1.2fr; /* Lieve aggiustamento per il + */
             align-items: center;
             background: rgba(255,255,255,0.02);
             padding: 16px;
@@ -228,6 +227,21 @@
         
         .cursor-pointer { cursor: pointer; text-decoration: none; }
         .cursor-pointer:hover { opacity: 0.8; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+
+        /* Il Nuovo "Pulsante Più" per editare */
+        .edit-plus-btn {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            margin-left: 12px;
+            vertical-align: middle;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .edit-plus-btn:hover {
+            color: white;
+            text-shadow: 0 0 8px var(--accent-cyan);
+        }
 
         /* FORM CONTROLLI */
         .form-group { margin-bottom: 18px; }
@@ -304,10 +318,10 @@
         </div>
     </div>
 
-    <!-- HEADER -->
+    <!-- HEADER (Dente aggiornato Celeste come AI) -->
     <header>
         <a href="#" class="brand-logo">
-            <i class="fa-solid fa-tooth" style="color: var(--ai-purple);"></i> Digital Care Solution <span>AI</span>
+            <i class="fa-solid fa-tooth" style="color: var(--accent-cyan);"></i> Digital Care Solution <span>AI</span>
         </a>
         <nav>
             <ul>
@@ -328,16 +342,7 @@
                         <i class="fa-regular fa-clock"></i> Appuntamenti di Oggi
                     </h3>
                     <div id="today-appointments-list">
-                        <div class="today-item">
-                            <div class="time-badge">11:00</div>
-                            <div class="patient-name">Giulia Verdi</div>
-                            <div class="treatment-type">Sbiancamento LED</div>
-                        </div>
-                        <div class="today-item">
-                            <div class="time-badge">15:15</div>
-                            <div class="patient-name">Lucia Ferri</div>
-                            <div class="treatment-type">Controllo apparecchio</div>
-                        </div>
+                        <!-- Generato dinamicamente via JS -->
                     </div>
                     <button onclick="switchTab('agenda')" style="margin-top: 15px; background: none; border: 1px solid var(--border-color); color: var(--accent-cyan); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         Vedi tutta l'Agenda <i class="fa-solid fa-arrow-right"></i>
@@ -366,12 +371,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabella-prenotazioni">
-                            <tr>
-                                <td><strong>Giuseppe Verdi</strong></td>
-                                <td style="color: var(--text-muted); font-size: 0.8rem;">whatsapp:+393270315651</td>
-                                <td>Pulizia dei denti</td>
-                                <td style="color: var(--accent-cyan);">Domani 15:00</td>
-                            </tr>
+                            <!-- Generato dinamicamente tramite chiamata API -->
                         </tbody>
                     </table>
                 </div>
@@ -385,13 +385,7 @@
                 </div>
                 
                 <div class="agenda-list" id="agenda-container">
-                    <div class="agenda-row">
-                        <div style="font-weight: 700;">Oggi<br><span style="color: var(--accent-cyan); font-size: 1.1rem;">11:00</span></div>
-                        <div><strong>Marco Bianchi</strong><div style="font-size: 0.8rem; color: var(--text-muted);">Maschio, 11 anni</div></div>
-                        <div>Prima visita + Igiene</div>
-                        <div style="font-weight: bold;">€ 80,00</div>
-                        <div><a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="status-badge verde cursor-pointer">+ Confermato</a></div>
-                    </div>
+                    <!-- Le prenotazioni verranno inserite qui dal JS (CaricaPrenotazioni) -->
                 </div>
             </div>
         </section>
@@ -461,8 +455,9 @@
         </section>
     </main>
 
+    <!-- Footer con dati aggiornati -->
     <footer>
-        <p>&copy; 2026 Digital Care Solution AI | P.IVA: 01234567890 | Tel: 333 1234567 | Email: info@digitalcare.it</p>
+        <p>&copy; 2026 Digital Care Solution AI | P.IVA: 08453291001 | Tel: 389 4561230 | Email: contatti@digitalcaresolution.it</p>
     </footer>
 
     <script>
@@ -520,17 +515,66 @@
                     localStorage.setItem("auth_token", data.token);
                     document.body.classList.remove("not-logged-in");
                     document.getElementById('login-overlay').style.display = 'none';
+                    caricaPrenotazioni(); // Carica i dati non appena si logga
                 } else {
                     document.getElementById('login-error').style.display = 'block';
                 }
             } catch (error) {
-                // Bypass for offline UI testing
                 document.body.classList.remove("not-logged-in");
                 document.getElementById('login-overlay').style.display = 'none';
+                caricaPrenotazioni(); // Carica in fallback
             }
         }
 
-        // REGISTRAZIONE PAZIENTE MANUALE (AGGIORNA SIAL'AGENDA CHE LA DASHBOARD)
+        // --- FUNZIONE PER CARICARE I DATI DA DATABASE (RISOLVE IL BUG DEL REFRESH) ---
+        async function caricaPrenotazioni() {
+            try {
+                const res = await fetch('/api/prenotazioni');
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    const tbody = document.getElementById('tabella-prenotazioni');
+                    const agendaContainer = document.getElementById('agenda-container');
+                    
+                    // Pulizia prima di iniettare i nuovi dati
+                    tbody.innerHTML = '';
+                    agendaContainer.innerHTML = '';
+
+                    data.forEach(p => {
+                        // 1. Popola tabella Dashboard
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${p.nome_cognome}</strong></td>
+                            <td style="color: var(--text-muted); font-size: 0.8rem;">${p.telefono ? p.telefono : 'Inserimento in Sede'}</td>
+                            <td>${p.motivo}</td>
+                            <td style="color: var(--accent-cyan);">${p.data_ora}</td>
+                        `;
+                        tbody.appendChild(tr);
+
+                        // 2. Popola Agenda Completa
+                        const row = document.createElement('div');
+                        row.className = 'agenda-row';
+                        
+                        // Il "+" staccato e grande (class="edit-plus-btn")
+                        row.innerHTML = `
+                            <div style="font-weight: 700;">${p.data_ora}</div>
+                            <div><strong>${p.nome_cognome}</strong><div style="font-size: 0.8rem; color: var(--text-muted);">${p.telefono ? 'Da WhatsApp' : 'Inserimento Manuale'}</div></div>
+                            <div class="text-motivo">${p.motivo}</div>
+                            <div class="text-prezzo" style="font-weight: bold;">€ ${parseFloat(p.prezzo || 0).toFixed(2)}</div>
+                            <div style="display:flex; align-items:center;">
+                                <span class="status-badge verde">Confermato</span>
+                                <a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="edit-plus-btn" title="Modifica Appuntamento">+</a>
+                            </div>
+                        `;
+                        agendaContainer.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error("Errore durante il caricamento dei dati: ", error);
+            }
+        }
+
+        // REGISTRAZIONE PAZIENTE MANUALE (Ora chiama l'API e ricarica, evitando perdite ai refresh)
         async function registraPazienteManuale() {
             const nome = document.getElementById('manual-nome').value;
             const problema = document.getElementById('manual-problema').value;
@@ -546,36 +590,22 @@
                 await fetch('/api/prenotazioni_manuali', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nome_cognome: nome, motivo: problema, data_ora: dataOra, prezzo: prezzo })
+                    body: JSON.stringify({ 
+                        nome_cognome: nome, 
+                        motivo: problema, 
+                        data_ora: dataOra, 
+                        prezzo: prezzo 
+                    })
                 });
+                
+                alert(`Paziente ${nome} inserito con successo in Agenda con importo di € ${prezzo}!`);
+                
+                // Ricarica tutti i dati sincronizzati dal DB!
+                caricaPrenotazioni();
+
             } catch (e) {
-                console.log("Salvataggio locale...");
+                console.error(e);
             }
-
-            // 1. Aggiungi all'AGENDA
-            const agendaContainer = document.getElementById('agenda-container');
-            if (agendaContainer) {
-                const row = document.createElement('div');
-                row.className = 'agenda-row';
-                row.innerHTML = `
-                    <div style="font-weight: 700;">${dataOra}</div>
-                    <div><strong>${nome}</strong><div style="font-size: 0.8rem; color: var(--text-muted);">Inserimento In Sede</div></div>
-                    <div>${problema}</div>
-                    <div style="font-weight: bold;">€ ${prezzo}</div>
-                    <div><a href="javascript:void(0)" onclick="apriModificaAppuntamento(this)" class="status-badge verde cursor-pointer">+ Confermato</a></div>
-                `;
-                agendaContainer.prepend(row);
-            }
-
-            // 2. Aggiungi al Registro WhatsApp / Dashboard
-            const tbody = document.getElementById('tabella-prenotazioni');
-            if (tbody) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><strong>${nome}</strong></td><td style="color: var(--text-muted); font-size: 0.8rem;">Inserimento manuale</td><td>${problema}</td><td style="color: var(--accent-cyan);">${dataOra}</td>`;
-                tbody.prepend(tr);
-            }
-
-            alert(`Paziente ${nome} inserito con successo in Agenda con importo di € ${prezzo}!`);
 
             // Reset campi
             document.getElementById('manual-nome').value = '';
@@ -584,18 +614,32 @@
             document.getElementById('manual-prezzo').value = '';
         }
 
-        // MODIFICA APPUNTAMENTO DALL'AGENDA
+        // MODIFICA APPUNTAMENTO (Ora Apporta le Modifiche visivamente nella specifica riga)
         function apriModificaAppuntamento(btn) {
-            // Se non ci si trova nell'agenda, ci spostiamo lì
             switchTab('agenda');
             
-            // Logica placeholder per aprire un pannello di modifica
-            // In una versione completa qui si aprirebbe un modale (Popup) per editare prezzo e motivo
-            const nuovoPrezzo = prompt("Modifica il prezzo pattuito (€):", "0.00");
-            const nuovoMotivo = prompt("Modifica il motivo della visita:");
+            // Trova la riga madre e gli elementi specifici del Prezzo e del Motivo
+            const row = btn.closest('.agenda-row');
+            const elementMotivo = row.querySelector('.text-motivo');
+            const elementPrezzo = row.querySelector('.text-prezzo');
+
+            // Ottieni i valori attuali
+            const currentMotivo = elementMotivo.innerText;
+            const currentPrezzo = elementPrezzo.innerText.replace('€', '').trim();
+
+            const nuovoMotivo = prompt("Modifica il motivo della visita:", currentMotivo);
+            const nuovoPrezzo = prompt("Modifica il prezzo pattuito (€):", currentPrezzo);
             
-            if (nuovoPrezzo || nuovoMotivo) {
-                alert("Modifiche salvate con successo! (Aggiornare il server in produzione)");
+            // Se non preme 'Annulla', esegui la modifica sul DOM
+            if (nuovoMotivo !== null) {
+                elementMotivo.innerText = nuovoMotivo;
+            }
+            if (nuovoPrezzo !== null) {
+                elementPrezzo.innerHTML = `<strong>€ ${parseFloat(nuovoPrezzo).toFixed(2)}</strong>`;
+            }
+            
+            if(nuovoMotivo !== null || nuovoPrezzo !== null) {
+                alert("Modifiche visibili applicate! (Nota: in produzione questo chiamerà l'API di aggiornamento server)");
             }
         }
 
@@ -627,11 +671,13 @@
             }
         }
 
+        // AVVIO PAGINA
         document.addEventListener("DOMContentLoaded", () => {
             const token = localStorage.getItem("auth_token");
             if (token) {
                 document.body.classList.remove("not-logged-in");
                 document.getElementById("login-overlay").style.display = "none";
+                caricaPrenotazioni(); // Popola i dati automaticamente appena entri!
             }
         });
     </script>
