@@ -32,7 +32,6 @@ def init_db():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Creazione tabella con la nuova colonna "prezzo"
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS prenotazioni (
                 id SERIAL PRIMARY KEY,
@@ -45,11 +44,10 @@ def init_db():
             )
         ''')
         
-        # Tenta di aggiungere la colonna 'prezzo' se la tabella esisteva già senza
         try:
             cursor.execute('ALTER TABLE prenotazioni ADD COLUMN prezzo DECIMAL(10,2) DEFAULT 0.00;')
         except psycopg2.errors.DuplicateColumn:
-            pass # La colonna esiste già, tutto ok
+            pass
             
         conn.commit()
         conn.close()
@@ -57,10 +55,8 @@ def init_db():
     except Exception as e:
         print(f"❌ Errore durante l'inizializzazione del DB: {e}")
 
-# Eseguiamo la creazione/aggiornamento della tabella all'avvio
 init_db()
 
-# --- FUNZIONE PER SALVARE LA PRENOTAZIONE DA WHATSAPP ---
 def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
     try:
         conn = get_db_connection()
@@ -71,15 +67,10 @@ def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
         ''', (numero_telefono, nome_cognome, motivo, data_ora))
         conn.commit()
         conn.close()
-        print(f"\n🎉 PRENOTAZIONE REGISTRATA NEL DB: {nome_cognome} ({data_ora})\n")
         return f"Prenotazione registrata con successo nel sistema per {nome_cognome}."
     except Exception as e:
-        print(f"❌ Errore nel salvataggio DB: {e}")
         return "Errore interno durante il salvataggio."
 
-# ==============================================================================
-# 🛠️ TOOL PER GEMINI E FUNZIONI CLINICA
-# ==============================================================================
 salva_prenotazione_tool = {
     'name': 'salva_prenotazione',
     'description': 'Registra la richiesta di appuntamento dopo aver ottenuto nome, cognome, motivo e data/ora preferita.',
@@ -100,20 +91,18 @@ def carica_dati_clinica(id_clinica="dental_care_demo"):
             database = json.load(f)
             return database.get(id_clinica, {})
     except Exception as e:
-        print(f"❌ Errore caricamento database: {e}")
         return {}
 
 def genera_system_prompt(dati_clinica):
     servizi_str = "\n".join([f"- {s['nome']}: {s['prezzo']}" for s in dati_clinica.get("servizi", [])])
     regole_str = "\n".join([f"- {r}" for r in dati_clinica.get("regole_assistente", [])])
 
-    # Inseriti dati credibili per P.IVA, email e telefono
     prompt = (
         f"Sei l'assistente virtuale ufficiale della clinica 'Digital Care Solution AI'.\n\n"
         f"INFORMAZIONI CLINICA:\n"
         f"- Indirizzo: {dati_clinica.get('indirizzo', 'Via Roma 1, Milano')}\n"
-        f"- Telefono: 3270315651\n" 
-        f"- Email: digitalcaresolution24.7@gmail.com\n"
+        f"- Telefono: 389 4561230\n" 
+        f"- Email: contatti@digitalcaresolution.it\n"
         f"- Partita IVA: 08453291001\n"
         f"- Orari: {dati_clinica.get('orari')}\n"
         f"- Urgenze: {dati_clinica.get('gestione_urgenze')}\n\n"
@@ -124,9 +113,6 @@ def genera_system_prompt(dati_clinica):
     )
     return prompt
 
-# ==============================================================================
-# 🌐 ROTTE WEB E DASHBOARD
-# ==============================================================================
 @app.route('/')
 @app.route('/dashboard')
 def home():
@@ -154,7 +140,6 @@ def api_prenotazioni():
         cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
         rows = cursor.fetchall()
         conn.close()
-        
         return jsonify([dict(row) for row in rows]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -169,6 +154,35 @@ def aggiungi_manuale():
             INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora, prezzo, stato)
             VALUES (%s, %s, %s, %s, %s, 'Confermato')
         ''', (data.get('telefono', ''), data['nome_cognome'], data['motivo'], data['data_ora'], data.get('prezzo', 0.00)))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/prenotazioni/<int:id_paziente>', methods=['PUT'])
+def aggiorna_prenotazione(id_paziente):
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE prenotazioni 
+            SET motivo = %s, prezzo = %s 
+            WHERE id = %s
+        ''', (data.get('motivo'), data.get('prezzo'), id_paziente))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/prenotazioni/<int:id_paziente>', methods=['DELETE'])
+def elimina_prenotazione(id_paziente):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM prenotazioni WHERE id = %s', (id_paziente,))
         conn.commit()
         conn.close()
         return jsonify({"status": "success"}), 200
@@ -195,9 +209,6 @@ def export_csv():
 def live_stats():
     return jsonify({"revenue": 4850.00, "transactions": 14})
 
-# ==============================================================================
-# 📩 WEBHOOK WHATSAPP (GREEN API)
-# ==============================================================================
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
     data = request.get_json()
