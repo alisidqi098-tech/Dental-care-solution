@@ -258,7 +258,7 @@
     <main>
         <section id="dashboard" class="tab-content active">
             <div class="dashboard-layout">
-                <!-- APPUNTAMENTI DI OGGI RIPRISTINATI -->
+                <!-- APPUNTAMENTI DI OGGI -->
                 <div class="today-card">
                     <h3 style="color: var(--accent-cyan); font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                         <i class="fa-regular fa-clock"></i> Appuntamenti di Oggi
@@ -329,7 +329,7 @@
                     </div>
                     <div class="form-group">
                         <label>Data e Ora</label>
-                        <input type="text" id="manual-data">
+                        <input type="text" id="manual-data" placeholder="es. 2026-09-04 15:30">
                     </div>
                     <div class="form-group">
                         <label>Prezzo Pattuito (€)</label>
@@ -454,6 +454,7 @@
                     document.getElementById('login-error').style.display = 'block';
                 }
             } catch (error) {
+                // Modalità offline per test (rimuovere in produzione se necessario)
                 document.body.classList.remove("not-logged-in");
                 document.getElementById('login-overlay').style.display = 'none';
                 caricaPrenotazioni();
@@ -477,6 +478,13 @@
 
                     let todayCount = 0;
 
+                    // Calcola la data esatta di oggi nel formato YYYY-MM-DD
+                    const oggi = new Date();
+                    const anno = oggi.getFullYear();
+                    const mese = String(oggi.getMonth() + 1).padStart(2, '0');
+                    const giorno = String(oggi.getDate()).padStart(2, '0');
+                    const dataOggiStr = `${anno}-${mese}-${giorno}`;
+
                     data.forEach(p => {
                         // 1. Tabella Dashboard
                         const tr = document.createElement('tr');
@@ -488,13 +496,17 @@
                         `;
                         tbody.appendChild(tr);
 
-                        // 2. Appuntamenti di Oggi (Filtra se la data contiene "Oggi" o la data corrente)
-                        if (p.data_ora && (p.data_ora.toLowerCase().includes('oggi') || todayCount < 3)) {
+                        // 2. Appuntamenti di Oggi (Filtra calcolando la data di oggi)
+                        if (p.data_ora && p.data_ora.startsWith(dataOggiStr)) {
                             todayCount++;
+                            
+                            // Estrapola solo l'orario se presente uno spazio, altrimenti mostra tutto
+                            let orario = p.data_ora.includes(' ') ? p.data_ora.split(' ')[1] : p.data_ora;
+
                             const todayItem = document.createElement('div');
                             todayItem.className = 'today-item';
                             todayItem.innerHTML = `
-                                <div class="time-badge"><i class="fa-regular fa-clock"></i> ${p.data_ora}</div>
+                                <div class="time-badge"><i class="fa-regular fa-clock"></i> ${orario}</div>
                                 <div class="patient-name">${p.nome_cognome}</div>
                                 <div class="treatment-type">${p.motivo}</div>
                             `;
