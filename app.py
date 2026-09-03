@@ -5,6 +5,8 @@ import psycopg2.extras
 import google.generativeai as genai
 import requests
 import csv
+from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, jsonify, render_template, Response
 from dotenv import load_dotenv
 
@@ -18,8 +20,12 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 cronologia_chat = {}
 
+# Credenziali Green API (messe come globali per comodità)
+ID_ISTANZA = "710722725565"
+API_TOKEN = "fa0638935257436b88c29d9f6d731a684735faf1946d4d5793"
+
 # ==============================================================================
-# 🗄️ CONFIGURAZIONE DATABASE POSTGRESQL (NEON / SUPABASE)
+# 🗄️ CONFIGURAZIONE DATABASE POSTGRESQL
 # ==============================================================================
 def get_db_connection():
     db_url = os.environ.get("DATABASE_URL")
@@ -39,7 +45,7 @@ def init_db():
                 nome_cognome VARCHAR(255),
                 motivo TEXT,
                 data_ora VARCHAR(255),
-                stato VARCHAR(50) DEFAULT 'In attesa di conferma',
+                stato VARCHAR(50) DEFAULT 'Confermato',
                 prezzo DECIMAL(10,2) DEFAULT 0.00
             )
         ''')
@@ -62,8 +68,8 @@ def salva_prenotazione(numero_telefono, nome_cognome, motivo, data_ora):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO prenotazioni (telefono, nome_cognome, motivo, data_ora, stato)
+            VALUES (%s, %s, %s, %s, 'Confermato')
         ''', (numero_telefono, nome_cognome, motivo, data_ora))
         conn.commit()
         conn.close()
@@ -79,7 +85,7 @@ salva_prenotazione_tool = {
         'properties': {
             'nome_cognome': {'type': 'STRING', 'description': 'Nome e cognome del paziente'},
             'motivo': {'type': 'STRING', 'description': 'Motivo della visita o trattamento'},
-            'data_ora': {'type': 'STRING', 'description': 'Data e/o orario preferito per l\'appuntamento'}
+            'data_ora': {'type': 'STRING', 'description': 'Data e orario preferito. DEVI usare SEMPRE il formato YYYY-MM-DD HH:MM (es. 2026-09-05 15:30)'}
         },
         'required': ['nome_cognome', 'motivo', 'data_ora']
     }
@@ -103,16 +109,60 @@ def genera_system_prompt(dati_clinica):
         f"- Indirizzo: {dati_clinica.get('indirizzo', 'Via Roma 1, Milano')}\n"
         f"- Telefono: 389 4561230\n" 
         f"- Email: contatti@digitalcaresolution.it\n"
-        f"- Partita IVA: 08453291001\n"
         f"- Orari: {dati_clinica.get('orari')}\n"
         f"- Urgenze: {dati_clinica.get('gestione_urgenze')}\n\n"
         f"LISTINO SERVIZI:\n{servizi_str}\n\n"
         f"REGOLE:\n{regole_str}\n"
         f"- Quando un paziente vuole prenotare, richiedi Nome, Cognome, Motivo e Data/Ora preferita.\n"
-        f"- Quando hai TUTTE queste informazioni, usa lo strumento 'salva_prenotazione' per registrare la richiesta."
+        f"- Quando salvi i dati, nel campo data_ora usa SEMPRE il formato numerico 'YYYY-MM-DD HH:MM'. Oggi è {datetime.now().strftime('%Y-%m-%d')}."
     )
     return prompt
 
+# ==============================================================================
+# ⏰ SISTEMA PROMEMORIA 24 ORE
+# ==============================================================================
+def controlla_e_invia_promemoria():
+    print("Inizio controllo promemoria pazienti per domani...")
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute("SELECT * FROM prenotazioni WHERE stato = 'Confermato'")
+        rows = cursor.fetchall()
+        conn.close()
+
+        domani = datetime.now() + timedelta(days=1)
+        domani_str = domani.strftime("%Y-%m-%d") # Es: "2026-09-05"
+
+        for p in rows:
+            data_ora_paziente = p['data_ora']
+            numero = p['telefono']
+            
+            # Se la data salvata nel database inizia con la data di domani
+            if data_ora_paziente and data_ora_paziente.startswith(domani_str) and numero:
+                nome = p['nome_cognome']
+                ora = data_ora_paziente.split(" ")[1] if " " in data_ora_paziente else data_ora_paziente
+                
+                messaggio = (f"🤖 *Promemoria Digital Care AI*\n\n"
+                             f"Gentile {nome}, ti ricordiamo il tuo appuntamento per domani alle ore *{ora}* "
+                             f"presso il nostro studio.\n\nPer qualsiasi disdetta rispondi a questo messaggio. A presto!")
+                
+                url = f"https://api.green-api.com/waInstance{ID_ISTANZA}/sendMessage/{API_TOKEN}"
+                payload = {"chatId": numero, "message": messaggio}
+                headers = {'Content-Type': 'application/json'}
+                requests.post(url, json=payload, headers=headers)
+                print(f"✅ Promemoria inviato a {nome} al numero {numero}")
+    except Exception as e:
+        print(f"❌ Errore durante l'invio dei promemoria: {e}")
+
+# Avvia il "Cron Job" (Programmatore orario)
+scheduler = BackgroundScheduler()
+# Impostato per partire tutti i giorni alle 09:00 di mattina
+scheduler.add_job(func=controlla_e_invia_promemoria, trigger="cron", hour=9, minute=0)
+scheduler.start()
+
+# ==============================================================================
+# 🌐 ROTTE WEB E DASHBOARD
+# ==============================================================================
 @app.route('/')
 @app.route('/dashboard')
 def home():
@@ -189,26 +239,9 @@ def elimina_prenotazione(id_paziente):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/export-csv')
-def export_csv():
-    conn = get_db_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cursor.execute('SELECT * FROM prenotazioni ORDER BY id DESC')
-    rows = cursor.fetchall()
-    conn.close()
-
-    def generate():
-        data = ["ID,Telefono,Paziente,Motivo,Data,Stato,Prezzo_Euro\n"]
-        for r in rows:
-            data.append(f"{r['id']},{r['telefono']},{r['nome_cognome']},{r['motivo']},{r['data_ora']},{r['stato']},{r['prezzo']}\n")
-        return "".join(data)
-    
-    return Response(generate(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=pazienti_digital_care.csv"})
-
-@app.route('/api/live-stats', methods=['GET'])
-def live_stats():
-    return jsonify({"revenue": 4850.00, "transactions": 14})
-
+# ==============================================================================
+# 📩 WEBHOOK WHATSAPP (GREEN API) CON SALVATAGGIO ERRORI VOCALI
+# ==============================================================================
 @app.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
     data = request.get_json()
@@ -219,6 +252,16 @@ def whatsapp_webhook():
         messaggio_utente = data['messageData']['textMessageData']['textMessage']
         numero_mittente = data['senderData']['sender'] 
     except KeyError:
+        # Se è arrivato un audio, foto o sticker entra qui invece di bloccarsi
+        try:
+            numero_mittente = data['senderData']['sender'] 
+            url = f"https://api.green-api.com/waInstance{ID_ISTANZA}/sendMessage/{API_TOKEN}"
+            requests.post(url, json={
+                "chatId": numero_mittente, 
+                "message": "🤖 *AI System*: Scusami, al momento riesco a leggere solo messaggi di testo. Potresti scrivermi a parole la tua richiesta?"
+            }, headers={'Content-Type': 'application/json'})
+        except:
+            pass
         return jsonify({"status": "no_text"}), 200
 
     dati_clinica = carica_dati_clinica("dental_care_demo")
@@ -239,11 +282,8 @@ def whatsapp_webhook():
         risposta_ia = response.text
 
     except Exception as e:
-        risposta_ia = "Sistema in aggiornamento, riprova tra poco."
+        risposta_ia = "Sistema in aggiornamento, riprova tra pochissimo."
 
-    ID_ISTANZA = "710722725565"
-    API_TOKEN = "fa0638935257436b88c29d9f6d731a684735faf1946d4d5793"
-    
     url = f"https://api.green-api.com/waInstance{ID_ISTANZA}/sendMessage/{API_TOKEN}"
     payload = {"chatId": numero_mittente, "message": risposta_ia}
     headers = {'Content-Type': 'application/json'}
