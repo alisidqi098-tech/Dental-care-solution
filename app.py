@@ -107,14 +107,14 @@ def genera_system_prompt(dati_clinica):
     servizi_str = "\n".join([f"- {s['nome']}: {s['prezzo']}" for s in dati_clinica.get("servizi", [])])
     regole_str = "\n".join([f"- {r}" for r in dati_clinica.get("regole_assistente", [])])
 
-    # Inserisci qui i dati della foto (Telefono, Email, P.IVA)
+    # Inseriti dati credibili per P.IVA, email e telefono
     prompt = (
         f"Sei l'assistente virtuale ufficiale della clinica 'Digital Care Solution AI'.\n\n"
         f"INFORMAZIONI CLINICA:\n"
         f"- Indirizzo: {dati_clinica.get('indirizzo', 'Via Roma 1, Milano')}\n"
-        f"- Telefono: 333 1234567\n" 
-        f"- Email: info@digitalcare.it\n"
-        f"- Partita IVA: 01234567890\n"
+        f"- Telefono: 389 4561230\n" 
+        f"- Email: contatti@digitalcaresolution.it\n"
+        f"- Partita IVA: 08453291001\n"
         f"- Orari: {dati_clinica.get('orari')}\n"
         f"- Urgenze: {dati_clinica.get('gestione_urgenze')}\n\n"
         f"LISTINO SERVIZI:\n{servizi_str}\n\n"
@@ -159,7 +159,6 @@ def api_prenotazioni():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# NUOVA ROTTA: Aggiunta manuale dalla dashboard (con prezzo)
 @app.route('/api/prenotazioni_manuali', methods=['POST'])
 def aggiungi_manuale():
     data = request.get_json()
@@ -176,7 +175,6 @@ def aggiungi_manuale():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# EXTRA PRO: Esportazione CSV per commercialista/contabilità
 @app.route('/api/export-csv')
 def export_csv():
     conn = get_db_connection()
@@ -241,3 +239,6 @@ def whatsapp_webhook():
     requests.post(url, json=payload, headers=headers)
 
     return jsonify({"status": "success"}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
