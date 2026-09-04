@@ -175,6 +175,32 @@
         }
         .status-badge.verde { background: rgba(16, 185, 129, 0.15); color: var(--status-green); border: 1px solid rgba(16, 185, 129, 0.3); }
 
+        /* NUOVO: SELETTORE DI STATO DINAMICO */
+        .status-select {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid transparent;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .status-confermato { background: rgba(16, 185, 129, 0.15); color: var(--status-green); border-color: rgba(16, 185, 129, 0.3); }
+        .status-in-arrivo { background: rgba(245, 158, 11, 0.15); color: var(--status-yellow); border-color: rgba(245, 158, 11, 0.3); }
+        .status-completato { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border-color: rgba(148, 163, 184, 0.3); }
+        .status-disdetto { background: rgba(239, 68, 68, 0.15); color: var(--status-red); border-color: rgba(239, 68, 68, 0.3); }
+
+        .status-select option {
+            background-color: var(--card-bg);
+            color: var(--text-light);
+        }
+
         .edit-plus-btn {
             font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan);
             margin-left: 10px; vertical-align: middle; text-decoration: none; transition: all 0.2s;
@@ -314,7 +340,7 @@
 
         <section id="cassa" class="tab-content">
             <div class="grid-2">
-                <!-- INSERIMENTO MANUALE (SENZA ESEMPI) -->
+                <!-- INSERIMENTO MANUALE -->
                 <div class="card">
                     <div class="card-header"><i class="fa-solid fa-user-plus"></i> Inserimento Manuale in Sede</div>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Registra un nuovo paziente e configura il prezzo.</p>
@@ -338,7 +364,7 @@
                     <button class="btn-primary" onclick="registraPazienteManuale()"><i class="fa-solid fa-plus"></i> Registra in Agenda</button>
                 </div>
 
-                <!-- CHECKOUT STRIPE (SENZA ESEMPI) -->
+                <!-- CHECKOUT STRIPE -->
                 <div class="card">
                     <div class="card-header"><i class="fa-brands fa-stripe"></i> Pagamento Rapido (Stripe)</div>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Genera link di pagamento immediato per il paziente.</p>
@@ -496,11 +522,10 @@
                         `;
                         tbody.appendChild(tr);
 
-                        // 2. Appuntamenti di Oggi (Filtra calcolando la data di oggi)
+                        // 2. Appuntamenti di Oggi
                         if (p.data_ora && p.data_ora.startsWith(dataOggiStr)) {
                             todayCount++;
                             
-                            // Estrapola solo l'orario se presente uno spazio, altrimenti mostra tutto
                             let orario = p.data_ora.includes(' ') ? p.data_ora.split(' ')[1] : p.data_ora;
 
                             const todayItem = document.createElement('div');
@@ -513,18 +538,28 @@
                             todayList.appendChild(todayItem);
                         }
 
-                        // 3. Agenda Completa (Con tasto Modifica '+' e Cestino per eliminare)
+                        // 3. Agenda Completa con il nuovo Selettore di Stato Dinamico
                         const row = document.createElement('div');
                         row.className = 'agenda-row';
                         row.dataset.id = p.id;
                         
+                        const statoAttuale = p.stato || 'Confermato';
+                        const classeColore = 'status-' + statoAttuale.toLowerCase().replace(' ', '-');
+
                         row.innerHTML = `
                             <div style="font-weight: 700;">${p.data_ora}</div>
                             <div><strong>${p.nome_cognome}</strong><div style="font-size: 0.8rem; color: var(--text-muted);">${p.telefono ? 'Da WhatsApp' : 'Inserimento Manuale'}</div></div>
                             <div class="text-motivo">${p.motivo}</div>
                             <div class="text-prezzo" style="font-weight: bold;">€ ${parseFloat(p.prezzo || 0).toFixed(2)}</div>
                             <div style="display:flex; align-items:center;">
-                                <span class="status-badge verde">Confermato</span>
+                                
+                                <select class="status-select ${classeColore}" onchange="cambiaStatoAppuntamento(this, ${p.id})">
+                                    <option value="Confermato" ${statoAttuale === 'Confermato' ? 'selected' : ''}>Confermato</option>
+                                    <option value="In arrivo" ${statoAttuale === 'In arrivo' ? 'selected' : ''}>In Arrivo</option>
+                                    <option value="Completato" ${statoAttuale === 'Completato' ? 'selected' : ''}>Completato</option>
+                                    <option value="Disdetto" ${statoAttuale === 'Disdetto' ? 'selected' : ''}>Disdetto</option>
+                                </select>
+
                                 <a href="javascript:void(0)" onclick="apriModificaAppuntamento(this, ${p.id})" class="edit-plus-btn" title="Modifica Appuntamento">+</a>
                                 <i class="fa-solid fa-trash-can delete-btn" onclick="eliminaAppuntamento(${p.id})" title="Elimina Paziente"></i>
                             </div>
@@ -624,6 +659,30 @@
                 } catch(e) {
                     console.error(e);
                 }
+            }
+        }
+
+        // CAMBIO STATO DINAMICO
+        async function cambiaStatoAppuntamento(selectEl, id) {
+            const nuovoStato = selectEl.value;
+            
+            // Aggiornamento visivo immediato (cambia colore)
+            const nuovaClasseColore = 'status-' + nuovoStato.toLowerCase().replace(' ', '-');
+            selectEl.className = 'status-select ' + nuovaClasseColore;
+
+            try {
+                // Chiamata backend per aggiornare il database
+                const res = await fetch(`/api/prenotazioni/${id}/stato`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ stato: nuovoStato })
+                });
+
+                if (!res.ok) {
+                    console.error("Errore server durante l'aggiornamento dello stato");
+                }
+            } catch(e) {
+                console.error("Errore di connessione: ", e);
             }
         }
 
