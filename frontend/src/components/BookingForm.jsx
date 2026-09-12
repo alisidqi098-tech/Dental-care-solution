@@ -2,12 +2,13 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Clock, CheckCircle2, Loader2, Video, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, Loader2, Video, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal, ChapterTag } from "./Reveal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30"];
+const DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30"];
+const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6];
 const CHAIRS = ["1-2 poltrone", "3-4 poltrone", "5-8 poltrone", "Oltre 8 poltrone"];
 
 const fmtDay = (d) => d.toLocaleDateString("it-IT", { weekday: "short" });
@@ -17,15 +18,23 @@ const fmtISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
 
 export const BookingForm = () => {
   const navigate = useNavigate();
+  const [schedule, setSchedule] = useState({ weekdays: DEFAULT_WEEKDAYS, slots: DEFAULT_SLOTS });
+  const [demoCount, setDemoCount] = useState(0);
+
+  useEffect(() => {
+    axios.get(`${API}/schedule`).then(({ data }) => setSchedule(data)).catch(() => {});
+    axios.get(`${API}/demo-bookings/count`).then(({ data }) => setDemoCount(data.count || 0)).catch(() => {});
+  }, []);
+
   const days = useMemo(() => {
     const out = [];
     const d = new Date();
     while (out.length < 30) {
       d.setDate(d.getDate() + 1);
-      if (d.getDay() !== 0) out.push(new Date(d));
+      if (schedule.weekdays.includes(d.getDay())) out.push(new Date(d));
     }
     return out;
-  }, []);
+  }, [schedule]);
 
   const stripRef = useRef(null);
   const scrollStrip = (dir) =>
@@ -99,6 +108,18 @@ export const BookingForm = () => {
               </div>
             ))}
           </div>
+          {demoCount > 0 && (
+            <div
+              data-testid="booking-social-proof"
+              className="mt-9 inline-flex items-center gap-3 rounded-full border border-mint/25 bg-mint/5 px-5 py-2.5"
+            >
+              <Users className="w-4 h-4 text-mint" />
+              <span className="text-sm text-slate-200">
+                <strong className="font-heading text-mint">{demoCount}</strong>{" "}
+                {demoCount === 1 ? "studio ha già prenotato" : "studi hanno già prenotato"} la demo
+              </span>
+            </div>
+          )}
         </Reveal>
 
         <Reveal delay={0.15} className="min-w-0">
@@ -167,7 +188,7 @@ export const BookingForm = () => {
                   <Clock className="w-3.5 h-3.5 text-neon" /> 2 · Scegli l'orario
                 </p>
                 <div className="grid grid-cols-4 gap-2">
-                  {SLOTS.map((s) => {
+                  {schedule.slots.map((s) => {
                     const taken = busySlots.includes(s);
                     return (
                       <button

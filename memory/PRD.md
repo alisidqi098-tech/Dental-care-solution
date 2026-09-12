@@ -22,6 +22,11 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
 
+## Implemented (2026-09-12, update 7)
+- Email di annullamento al medico quando lo stato diventa "annullata" dall'archivio
+- Calendario configurabile da /admin: card "Giorni e orari prenotabili" (weekday + slot toggle, PUT /api/admin/schedule protetto, GET /api/schedule pubblico); la landing mostra solo giorni/slot attivi
+- Contatore social proof reale nella sezione booking (GET /api/demo-bookings/count, esclude annullate)
+
 ## Implemented (2026-09-12, update 6)
 - Pulizia dati test: DELETE /api/demo-bookings/{id} protetto + cestino per riga in /admin con conferma
 - Anticipo serale: riepilogo team anche alle 20:00 con le demo di DOMANI (marker team_digest_eve_date); endpoint manuale supporta ?tomorrow=true

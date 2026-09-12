@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Loader2, LogOut, ShieldCheck, RefreshCw,
   CalendarDays, Building2, Phone, Mail, Armchair,
-  Clock, CheckCircle2, XCircle, Download, StickyNote, Send, Trash2,
+  Clock, CheckCircle2, XCircle, Download, StickyNote, Send, Trash2, Settings2, Save,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -24,6 +24,18 @@ const FILTERS = [
   { id: "fatta", label: "Fatte" },
   { id: "annullata", label: "Annullate" },
 ];
+
+const WEEKDAYS = [
+  { id: 1, label: "Lun" },
+  { id: 2, label: "Mar" },
+  { id: 3, label: "Mer" },
+  { id: 4, label: "Gio" },
+  { id: 5, label: "Ven" },
+  { id: 6, label: "Sab" },
+  { id: 0, label: "Dom" },
+];
+
+const ALL_SLOTS = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"];
 
 function formatApiErrorDetail(detail) {
   if (detail == null) return "Qualcosa è andato storto. Riprova.";
@@ -68,6 +80,8 @@ export default function Admin() {
     try {
       const { data } = await authedRequest("get", "/demo-bookings");
       setBookings(data);
+      const { data: sched } = await authedRequest("get", "/schedule");
+      setSchedule(sched);
     } finally {
       setLoadingList(false);
     }
@@ -113,6 +127,30 @@ export default function Admin() {
       }
     } catch {
       toast.error("Invio del riepilogo non riuscito");
+    }
+  };
+
+  const [schedule, setSchedule] = useState({ weekdays: [1, 2, 3, 4, 5, 6], slots: [] });
+
+  const toggleWeekday = (d) =>
+    setSchedule((s) => ({
+      ...s,
+      weekdays: s.weekdays.includes(d) ? s.weekdays.filter((x) => x !== d) : [...s.weekdays, d],
+    }));
+
+  const toggleSlot = (t) =>
+    setSchedule((s) => ({
+      ...s,
+      slots: s.slots.includes(t) ? s.slots.filter((x) => x !== t) : [...s.slots, t].sort(),
+    }));
+
+  const saveSchedule = async () => {
+    try {
+      const { data } = await authedRequest("put", "/admin/schedule", schedule);
+      setSchedule(data);
+      toast.success("Giorni e orari aggiornati: il calendario pubblico è già allineato");
+    } catch (e) {
+      toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Salvataggio calendario non riuscito");
     }
   };
 
@@ -323,6 +361,68 @@ export default function Admin() {
               {todoCount}
             </p>
             <p className="text-xs text-dim mt-1">Ancora da fare</p>
+          </div>
+        </div>
+
+        <div className="rounded-3xl glass p-6 sm:p-7 mb-8" data-testid="admin-schedule-card">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-neon/10 border border-neon/20 flex items-center justify-center">
+                <Settings2 className="w-4 h-4 text-neon" />
+              </div>
+              <div>
+                <p className="font-heading font-semibold text-slate-50 text-sm">Giorni e orari prenotabili</p>
+                <p className="text-xs text-dim mt-0.5">Il calendario pubblico della landing mostra solo quello che attivi qui</p>
+              </div>
+            </div>
+            <button
+              data-testid="admin-schedule-save"
+              onClick={saveSchedule}
+              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-teal2 to-neon px-4 py-2 text-xs font-bold text-ink transition-transform duration-300 hover:scale-[1.04]"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Salva calendario
+            </button>
+          </div>
+          <p className="font-mono2 text-[10px] uppercase tracking-[0.22em] text-dim mb-2.5">Giorni attivi</p>
+          <div className="flex flex-wrap gap-2 mb-5">
+            {WEEKDAYS.map((d) => {
+              const on = schedule.weekdays.includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  data-testid="admin-weekday-btn"
+                  onClick={() => toggleWeekday(d.id)}
+                  className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-all duration-300 ${
+                    on
+                      ? "border-transparent bg-gradient-to-b from-teal2 to-neon text-ink"
+                      : "border-white/10 bg-card2/50 text-dim hover:text-slate-200 hover:border-white/25"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="font-mono2 text-[10px] uppercase tracking-[0.22em] text-dim mb-2.5">Fasce orarie attive</p>
+          <div className="flex flex-wrap gap-2">
+            {ALL_SLOTS.map((t) => {
+              const on = schedule.slots.includes(t);
+              return (
+                <button
+                  key={t}
+                  data-testid="admin-slot-btn"
+                  onClick={() => toggleSlot(t)}
+                  className={`rounded-lg border px-3 py-1.5 font-mono2 text-xs transition-all duration-300 ${
+                    on
+                      ? "border-transparent bg-gradient-to-b from-teal2 to-neon text-ink font-semibold"
+                      : "border-white/10 bg-card2/50 text-dim hover:text-slate-200 hover:border-white/25"
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -225,6 +225,22 @@ def doctor_reminder_html(b: dict) -> str:
     )
 
 
+def doctor_cancel_html(b: dict) -> str:
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
+        f'<h1 style="font-size:20px;margin:0 0 16px">La tua demo &egrave; stata annullata</h1>'
+        f'<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Gentile {escape(b["name"])}, la demo '
+        f'di {escape(b["clinic"])} prevista per {escape(format_date_it(b["date"]))} alle '
+        f'{escape(b["time_slot"])} &egrave; stata annullata.</p>'
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Se si tratta di un errore o vuoi '
+        'riprogrammare, rispondi pure a questa email: troviamo subito un nuovo orario.</p>'
+        f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Inviato da {escape(EMAIL_FROM_NAME)}. '
+        'Non chiediamo mai password o dati di pagamento via email.</p>'
+        '</td></tr></table>'
+    )
+
+
 # ---------- Promemoria automatico 24h prima + riepilogo team ----------
 ROME = ZoneInfo("Europe/Rome")
 
@@ -495,6 +511,18 @@ async def update_booking_status(booking_id: str, input: StatusUpdate, user=Depen
     res = await db.demo_bookings.update_one({"id": booking_id}, {"$set": {"status": input.status}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Prenotazione non trovata")
+    if input.status == "annullata":
+        doc = await db.demo_bookings.find_one({"id": booking_id}, {"_id": 0})
+        if doc:
+            try:
+                await send_email(
+                    to=doc["email"],
+                    subject=f"La tua demo del {format_date_it(doc['date'])} \u00e8 stata annullata",
+                    html=doctor_cancel_html(doc),
+                )
+                logger.info(f"Email di annullamento inviata a {doc['email']}")
+            except Exception as e:
+                logger.error(f"Email di annullamento fallita per {booking_id}: {e}")
     return {"id": booking_id, "status": input.status}
 
 
@@ -511,6 +539,45 @@ async def busy_slots(date: str):
     docs = await db.demo_bookings.find({"date": date}, {"_id": 0, "time_slot": 1, "status": 1}).to_list(200)
     busy = [d["time_slot"] for d in docs if d.get("status", "da_fare") != "annullata"]
     return {"date": date, "busy": busy}
+
+
+@api_router.get("/demo-bookings/count")
+async def bookings_count():
+    count = await db.demo_bookings.count_documents({"status": {"$ne": "annullata"}})
+    return {"count": count}
+
+
+DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6]
+DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30"]
+
+
+class ScheduleUpdate(BaseModel):
+    weekdays: List[int]
+    slots: List[str]
+
+
+async def get_schedule() -> dict:
+    doc = await db.settings.find_one({"key": "schedule"}, {"_id": 0})
+    if doc:
+        return {"weekdays": doc.get("weekdays", DEFAULT_WEEKDAYS), "slots": doc.get("slots", DEFAULT_SLOTS)}
+    return {"weekdays": DEFAULT_WEEKDAYS, "slots": DEFAULT_SLOTS}
+
+
+@api_router.get("/schedule")
+async def read_schedule():
+    return await get_schedule()
+
+
+@api_router.put("/admin/schedule")
+async def write_schedule(input: ScheduleUpdate, user=Depends(get_current_user)):
+    weekdays = sorted({d for d in input.weekdays if 0 <= d <= 6})
+    slots = sorted({s for s in input.slots if re.fullmatch(r"\d{2}:\d{2}", s)})
+    if not weekdays or not slots:
+        raise HTTPException(status_code=400, detail="Seleziona almeno un giorno e una fascia oraria")
+    await db.settings.update_one(
+        {"key": "schedule"}, {"$set": {"weekdays": weekdays, "slots": slots}}, upsert=True
+    )
+    return {"weekdays": weekdays, "slots": slots}
 
 
 @api_router.delete("/demo-bookings/{booking_id}")
