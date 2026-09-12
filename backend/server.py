@@ -1,18 +1,32 @@
-from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
-import uuid
-from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+import os
+import re
+import ipaddress
+import logging
+import uuid
+import bcrypt
+import jwt
+import httpx
+from html import escape
+from html.parser import HTMLParser
+from urllib.parse import urlparse
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field, ConfigDict
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -21,7 +35,237 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# ---------- Email (Emergent managed Resend) ----------
+EMAIL_BASE_URL = "https://integrations.emergentagent.com"
+EMAIL_KEY = os.environ["EMERGENT_EMAIL_KEY"]
+EMAIL_FROM_NAME = os.environ["EMAIL_FROM_NAME"]
+EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO")
+TEAM_NOTIFICATION_EMAIL = os.environ.get("TEAM_NOTIFICATION_EMAIL")
 
+_SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
+_CRED_ASK = ("reply with your password", "reply with the code", "send your password", "cvv",
+             "send us your password", "enter your password below", "confirm your card number",
+             "your full card number", "seed phrase", "recovery phrase", "verify your card",
+             "social security number", "confirm your bank details")
+_HOSTISH = re.compile(r"\b(?:https?://)?((?:[a-z0-9-]+\.)+[a-z]{2,})", re.I)
+
+
+def _host_ok(host: str) -> bool:
+    if not host or "xn--" in host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        pass
+    return not any(host == s or host.endswith("." + s) for s in _SHORTENERS)
+
+
+def _same_site(shown: str, real: str) -> bool:
+    return shown == real or real.endswith("." + shown) or shown.endswith("." + real)
+
+
+class _EmailScan(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.tags, self.urls, self.anchors = set(), [], []
+        self._href, self._text = None, []
+    def handle_starttag(self, tag, attrs):
+        self.tags.add(tag.lower())
+        self.urls += [v for k, v in attrs if k.lower() in ("href", "src") and v]
+        if tag.lower() == "a":
+            self._href = dict((k.lower(), v) for k, v in attrs).get("href")
+            self._text = []
+    def handle_data(self, data):
+        if self._href is not None:
+            self._text.append(data)
+    def handle_endtag(self, tag):
+        if tag.lower() == "a" and self._href is not None:
+            self.anchors.append((self._href, "".join(self._text)))
+            self._href, self._text = None, []
+
+
+def _assert_safe_email(subject: str, html: str) -> None:
+    scan = _EmailScan(); scan.feed(html)
+    if scan.tags & {"form", "input", "textarea", "select"}:
+        raise ValueError("No forms or input fields in email (G2)")
+    body = f"{subject}\n{html}".lower()
+    for p in _CRED_ASK:
+        if p in body:
+            raise ValueError(f"Email asks the recipient for credentials: {p!r} (G2)")
+    for url in scan.urls:
+        low = url.strip().lower()
+        if low.startswith(("mailto:", "tel:", "cid:", "#")):
+            continue
+        if not low.startswith("https://"):
+            raise ValueError(f"Email links/assets must be absolute https: {url!r} (G3)")
+        host = urlparse(low).hostname or ""
+        if not _host_ok(host) or urlparse(low).username is not None:
+            raise ValueError(f"Shortened, numeric-host or credential-bearing URL: {url!r} (G3)")
+    for href, text in scan.anchors:
+        real = urlparse(href.strip().lower()).hostname or ""
+        if not real:
+            continue
+        for m in _HOSTISH.finditer(text):
+            if not _same_site(m.group(1).lower(), real):
+                raise ValueError(f"Anchor text {m.group(1)!r} != real link host {real!r} (G3)")
+
+
+async def send_email(*, to: str, subject: str, html: str, reply_to: str | None = None) -> str | None:
+    _assert_safe_email(subject, html)
+    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+    if reply_to or EMAIL_REPLY_TO:
+        payload["contact_email"] = reply_to or EMAIL_REPLY_TO
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{EMAIL_BASE_URL}/api/v1/email/send",
+                headers={"X-Email-Key": EMAIL_KEY},
+                json=payload,
+            )
+        resp.raise_for_status()
+        return resp.json().get("id")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Email send failed: {e.response.status_code} {e.response.text}")
+        raise HTTPException(status_code=502, detail="Failed to send email")
+    except Exception as e:
+        logger.error(f"Email send error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send email")
+
+
+_IT_MONTHS = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+              "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+
+
+def format_date_it(iso: str) -> str:
+    try:
+        d = datetime.strptime(iso, "%Y-%m-%d")
+        return f"{d.day} {_IT_MONTHS[d.month - 1]} {d.year}"
+    except Exception:
+        return iso
+
+
+def doctor_confirm_html(b) -> str:
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
+        f'<h1 style="font-size:20px;margin:0 0 16px">Demo confermata, {escape(b.name)}</h1>'
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">La tua videochiamata dimostrativa '
+        'di <strong>15 minuti</strong> con Dental Care Solution AI &egrave; prenotata.</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b.date))}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b.time_slot)}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Studio</td><td><strong>{escape(b.clinic)}</strong></td></tr></table>'
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Riceverai il link della videochiamata '
+        "a questo indirizzo email prima dell'appuntamento. Durante la demo vedrai una simulazione in "
+        'diretta sul tuo telefono: nessun impegno, solo automazione pura.</p>'
+        f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Inviato da {escape(EMAIL_FROM_NAME)}. '
+        'Non chiediamo mai password o dati di pagamento via email.</p>'
+        '</td></tr></table>'
+    )
+
+
+def team_notify_html(b) -> str:
+    chairs = escape(b.chairs or "-")
+    notes = escape(b.notes or "-")
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
+        f'<h1 style="font-size:20px;margin:0 0 16px">Nuova demo prenotata: {escape(b.clinic)}</h1>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b.date))}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b.time_slot)}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Contatto</td><td><strong>{escape(b.name)}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Studio</td><td>{escape(b.clinic)}</td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Email</td><td>{escape(b.email)}</td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Telefono</td><td>{escape(b.phone)}</td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Poltrone</td><td>{chairs}</td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Note</td><td>{notes}</td></tr></table>'
+        '<p style="font-size:14px;line-height:1.6;margin:0">Contatta lo studio per confermare e inviare '
+        'il link della videochiamata.</p>'
+        f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Notifica automatica di {escape(EMAIL_FROM_NAME)}.</p>'
+        '</td></tr></table>'
+    )
+
+
+# ---------- Auth (JWT + bcrypt) ----------
+JWT_ALGORITHM = "HS256"
+
+
+def get_jwt_secret() -> str:
+    return os.environ["JWT_SECRET"]
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+
+
+def create_access_token(user_id: str, email: str) -> str:
+    payload = {"sub": user_id, "email": email, "type": "access",
+               "exp": datetime.now(timezone.utc) + timedelta(minutes=15)}
+    return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def create_refresh_token(user_id: str) -> str:
+    payload = {"sub": user_id, "type": "refresh",
+               "exp": datetime.now(timezone.utc) + timedelta(days=7)}
+    return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def set_auth_cookies(response: Response, access: str, refresh: str):
+    response.set_cookie(key="access_token", value=access, httponly=True, secure=True,
+                        samesite="lax", max_age=900, path="/")
+    response.set_cookie(key="refresh_token", value=refresh, httponly=True, secure=True,
+                        samesite="lax", max_age=604800, path="/")
+
+
+async def get_current_user(request: Request) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Non autenticato")
+    try:
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Tipo di token non valido")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token scaduto")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Utente non trovato")
+    return user
+
+
+async def seed_admin():
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "")
+    if not admin_email or not admin_password:
+        return
+    existing = await db.users.find_one({"email": admin_email})
+    if existing is None:
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()), "email": admin_email,
+            "password_hash": hash_password(admin_password),
+            "name": "Admin", "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+        logger.info(f"Admin seeded: {admin_email}")
+    elif not verify_password(admin_password, existing["password_hash"]):
+        await db.users.update_one({"email": admin_email},
+                                  {"$set": {"password_hash": hash_password(admin_password)}})
+        logger.info("Admin password updated from env")
+
+
+# ---------- Models ----------
 class DemoBooking(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -48,6 +292,12 @@ class DemoBookingCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class LoginInput(BaseModel):
+    email: str
+    password: str
+
+
+# ---------- Routes ----------
 @api_router.get("/")
 async def root():
     return {"message": "Dental Care Solution AI API"}
@@ -59,16 +309,90 @@ async def create_demo_booking(input: DemoBookingCreate):
     doc = booking.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.demo_bookings.insert_one(doc)
+    try:
+        await send_email(
+            to=booking.email,
+            subject="La tua demo Dental Care Solution AI \u00e8 confermata",
+            html=doctor_confirm_html(booking),
+        )
+    except Exception as e:
+        logger.error(f"Conferma email al medico fallita: {e}")
+    if TEAM_NOTIFICATION_EMAIL:
+        try:
+            await send_email(
+                to=TEAM_NOTIFICATION_EMAIL,
+                subject=f"Nuova demo prenotata \u2014 {booking.clinic} ({format_date_it(booking.date)} {booking.time_slot})",
+                html=team_notify_html(booking),
+            )
+        except Exception as e:
+            logger.error(f"Notifica email al team fallita: {e}")
     return booking
 
 
 @api_router.get("/demo-bookings", response_model=List[DemoBooking])
-async def get_demo_bookings():
-    bookings = await db.demo_bookings.find({}, {"_id": 0}).to_list(1000)
+async def get_demo_bookings(user=Depends(get_current_user)):
+    bookings = await db.demo_bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for b in bookings:
         if isinstance(b.get('created_at'), str):
             b['created_at'] = datetime.fromisoformat(b['created_at'])
     return bookings
+
+
+@api_router.post("/auth/login")
+async def login(input: LoginInput, request: Request, response: Response):
+    email = input.email.strip().lower()
+    identifier = f"{request.client.host}:{email}"
+    attempt = await db.login_attempts.find_one({"identifier": identifier})
+    if attempt and attempt.get("count", 0) >= 5:
+        locked_until = attempt.get("locked_until")
+        if locked_until and datetime.fromisoformat(locked_until) > datetime.now(timezone.utc):
+            raise HTTPException(status_code=429, detail="Troppi tentativi. Riprova tra 15 minuti.")
+        await db.login_attempts.delete_one({"identifier": identifier})
+    user = await db.users.find_one({"email": email})
+    if not user or not verify_password(input.password, user["password_hash"]):
+        await db.login_attempts.update_one(
+            {"identifier": identifier},
+            {"$inc": {"count": 1},
+             "$set": {"locked_until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}},
+            upsert=True,
+        )
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+    await db.login_attempts.delete_one({"identifier": identifier})
+    set_auth_cookies(response, create_access_token(user["id"], email), create_refresh_token(user["id"]))
+    return {"id": user["id"], "email": email, "name": user.get("name", "Admin"), "role": user.get("role", "admin")}
+
+
+@api_router.post("/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    return {"status": "ok"}
+
+
+@api_router.get("/auth/me")
+async def me(user=Depends(get_current_user)):
+    return user
+
+
+@api_router.post("/auth/refresh")
+async def refresh_token(request: Request, response: Response):
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Refresh token mancante")
+    try:
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Tipo di token non valido")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sessione scaduta, accedi di nuovo")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token non valido")
+    user = await db.users.find_one({"id": payload["sub"]})
+    if not user:
+        raise HTTPException(status_code=401, detail="Utente non trovato")
+    response.set_cookie(key="access_token", value=create_access_token(user["id"], user["email"]),
+                        httponly=True, secure=True, samesite="lax", max_age=900, path="/")
+    return {"status": "ok"}
 
 
 app.include_router(api_router)
@@ -76,16 +400,17 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[os.environ.get("FRONTEND_URL", "http://localhost:3000")],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_db():
+    await db.users.create_index("email", unique=True)
+    await db.login_attempts.create_index("identifier")
+    await seed_admin()
 
 
 @app.on_event("shutdown")

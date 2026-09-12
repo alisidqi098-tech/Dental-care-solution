@@ -14,9 +14,14 @@ export const Footer = () => (
           <span className="font-mono2 text-[9px] uppercase tracking-[0.28em] text-dim">Solution</span>
         </div>
       </div>
-      <p className="text-xs text-dim text-center">
-        © {new Date().getFullYear()} Dental Care Solution AI · Pagamenti sicuri via Stripe · GDPR Compliant
-      </p>
+      <div className="flex flex-col items-center gap-3">
+        <p className="text-xs text-dim text-center">
+          © {new Date().getFullYear()} Dental Care Solution AI · Pagamenti sicuri via Stripe · GDPR Compliant
+        </p>
+        <a href="/admin" data-testid="footer-admin-link" className="font-mono2 text-[10px] uppercase tracking-[0.2em] text-dim/60 hover:text-neon transition-colors">
+          Area Riservata
+        </a>
+      </div>
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
         <span className="font-mono2 text-[10px] uppercase tracking-widest text-mist">Assistente attivo 24/7</span>

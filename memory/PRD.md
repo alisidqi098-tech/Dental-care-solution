@@ -22,6 +22,13 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
 
+## Implemented (2026-09-12, update 2)
+- Email transazionali (Resend gestito Emergent): conferma automatica al medico + notifica immediata al team (digitalcaresolution24.7@gmail.com) a ogni nuova demo, template HTML italiani con guardrail di sicurezza
+- Area Riservata /admin: login JWT (cookie httpOnly, refresh token, blocco brute-force 5 tentativi/15 min), archivio prenotazioni con statistiche e tabella completa (data, ora, studio, contatti, poltrone)
+- Admin seed idempotente: alisidqi098@gmail.com (credenziali in /app/memory/test_credentials.md)
+- GET /api/demo-bookings ora protetto da autenticazione
+- Calendario booking: striscia 30 giorni scrollabile con frecce, fix overflow orizzontale
+
 ## Implemented (2026-09-12)
 - Hero cinetico: reveal masked line-by-line, mockup WhatsApp auto-play + Dashboard live con tilt 3D parallax e badge fluttuante
 - Marquee editoriale lento (compatibilità OrisLine/XDENT/Stripe/GDPR)
@@ -40,9 +47,8 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 - Nessuna credenziale/auth richiesta (test_credentials.md vuoto di proposito)
 
 ## Backlog
-- P0: Email di conferma automatica al medico (Resend)
-- P1: Notifica WhatsApp/email al team vendite a ogni nuova demo
-- P1: Dashboard admin protetta per vedere le demo prenotate
+- P1: Promemoria email automatico 24h prima della demo al medico
+- P1: Stato demo (da fare / fatta / annullata) modificabile dall'archivio
 - P2: Embed Calendly reale opzionale
 - P2: Integrazione Stripe reale per caparra simulata in demo
 - P2: Multilingua (EN)
