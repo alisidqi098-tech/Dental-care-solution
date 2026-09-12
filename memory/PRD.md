@@ -22,6 +22,12 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
 
+## Implemented (2026-09-12, update 4)
+- Export CSV dall'area riservata (pulsante "Esporta CSV", separatore ;, BOM per Excel, include stato e note)
+- Note sullo studio: PATCH /api/demo-bookings/{id}/notes (protetto), editor inline espandibile in /admin con anteprima nota
+- Infrastruttura link videochiamata nelle email (conferma + promemoria): attiva via env VIDEO_CALL_LINK, fallback al testo attuale finché l'utente non fornisce il link Meet/Zoom
+- VINCOLO UTENTE: niente WhatsApp, niente Twilio, richieste demo solo su database
+
 ## Implemented (2026-09-12, update 3)
 - REBRAND COMPLETO: "Dental Care Solution AI" → "DigitalCareAI" ovunque (logo, footer, tabella confronto, titolo pagina, meta, email, EMAIL_FROM_NAME, API)
 - Promemoria automatico 24h prima della demo al medico (loop scheduler ogni 15 min, fuso Europe/Rome, salta annullate, campo reminder_sent_at)

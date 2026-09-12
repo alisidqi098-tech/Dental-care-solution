@@ -147,7 +147,21 @@ def format_date_it(iso: str) -> str:
         return iso
 
 
+def _meet_block(lead: str, fallback: str = "") -> str:
+    link = os.environ.get("VIDEO_CALL_LINK", "")
+    if link.startswith("https://"):
+        return (
+            f'<p style="font-size:14px;line-height:1.6;margin:0 0 12px">{escape(lead)} '
+            f'<a href="{escape(link)}" style="color:#0284c7">{escape(link)}</a></p>'
+        )
+    return fallback
+
+
 def doctor_confirm_html(b) -> str:
+    fallback = (
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Riceverai il link della videochiamata '
+        "a questo indirizzo email prima dell'appuntamento.</p>"
+    )
     return (
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
         'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
@@ -158,8 +172,8 @@ def doctor_confirm_html(b) -> str:
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b.date))}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b.time_slot)}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Studio</td><td><strong>{escape(b.clinic)}</strong></td></tr></table>'
-        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Riceverai il link della videochiamata '
-        "a questo indirizzo email prima dell'appuntamento. Durante la demo vedrai una simulazione in "
+        + _meet_block("Link della videochiamata:", fallback)
+        + '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Durante la demo vedrai una simulazione in '
         'diretta sul tuo telefono: nessun impegno, solo automazione pura.</p>'
         f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Inviato da {escape(EMAIL_FROM_NAME)}. '
         'Non chiediamo mai password o dati di pagamento via email.</p>'
@@ -201,7 +215,8 @@ def doctor_reminder_html(b: dict) -> str:
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b["date"]))}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b["time_slot"])}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Studio</td><td><strong>{escape(b["clinic"])}</strong></td></tr></table>'
-        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Tieni il telefono a portata di mano: '
+        + _meet_block("Ci colleghiamo da qui:")
+        + '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Tieni il telefono a portata di mano: '
         'durante la chiamata vedrai una simulazione in diretta del nostro assistente AI su WhatsApp. '
         "Se hai cambiato programmi, rispondi pure a questa email e riprogrammiamo l'appuntamento.</p>"
         f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Inviato da {escape(EMAIL_FROM_NAME)}. '
@@ -338,6 +353,7 @@ class DemoBooking(BaseModel):
     date: str
     time_slot: str
     notes: Optional[str] = None
+    admin_notes: Optional[str] = None
     status: str = "da_fare"
     reminder_sent_at: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -356,6 +372,10 @@ class DemoBookingCreate(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+
+
+class NotesUpdate(BaseModel):
+    notes: str = ""
 
 
 class LoginInput(BaseModel):
@@ -412,6 +432,14 @@ async def update_booking_status(booking_id: str, input: StatusUpdate, user=Depen
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Prenotazione non trovata")
     return {"id": booking_id, "status": input.status}
+
+
+@api_router.patch("/demo-bookings/{booking_id}/notes")
+async def update_booking_notes(booking_id: str, input: NotesUpdate, user=Depends(get_current_user)):
+    res = await db.demo_bookings.update_one({"id": booking_id}, {"$set": {"admin_notes": input.notes}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Prenotazione non trovata")
+    return {"id": booking_id, "admin_notes": input.notes}
 
 
 @api_router.post("/auth/login")

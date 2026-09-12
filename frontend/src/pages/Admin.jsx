@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Loader2, LogOut, ShieldCheck, RefreshCw,
   CalendarDays, Building2, Phone, Mail, Armchair,
-  Clock, CheckCircle2, XCircle,
+  Clock, CheckCircle2, XCircle, Download, StickyNote,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -46,14 +46,18 @@ export default function Admin() {
   const [bookings, setBookings] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [filter, setFilter] = useState("tutte");
+  const [expandedId, setExpandedId] = useState(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
-  const authedGet = useCallback(async (path) => {
+  const statusOf = (b) => b.status || "da_fare";
+
+  const authedRequest = useCallback(async (method, path, data) => {
     try {
-      return await axios.get(`${API}${path}`);
+      return await axios.request({ method, url: `${API}${path}`, data });
     } catch (e) {
       if (e.response?.status === 401) {
         await axios.post(`${API}/auth/refresh`);
-        return await axios.get(`${API}${path}`);
+        return await axios.request({ method, url: `${API}${path}`, data });
       }
       throw e;
     }
@@ -62,25 +66,16 @@ export default function Admin() {
   const loadBookings = useCallback(async () => {
     setLoadingList(true);
     try {
-      const { data } = await authedGet("/demo-bookings");
+      const { data } = await authedRequest("get", "/demo-bookings");
       setBookings(data);
     } finally {
       setLoadingList(false);
     }
-  }, [authedGet]);
+  }, [authedRequest]);
 
   const updateStatus = async (id, status) => {
     try {
-      try {
-        await axios.patch(`${API}/demo-bookings/${id}/status`, { status });
-      } catch (e) {
-        if (e.response?.status === 401) {
-          await axios.post(`${API}/auth/refresh`);
-          await axios.patch(`${API}/demo-bookings/${id}/status`, { status });
-        } else {
-          throw e;
-        }
-      }
+      await authedRequest("patch", `/demo-bookings/${id}/status`, { status });
       setBookings((bs) => bs.map((b) => (b.id === id ? { ...b, status } : b)));
       toast.success(`Demo segnata come "${STATUS[status].label}"`);
     } catch {
@@ -88,17 +83,64 @@ export default function Admin() {
     }
   };
 
+  const openNotes = (b) => {
+    if (expandedId === b.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(b.id);
+    setNoteDraft(b.admin_notes || "");
+  };
+
+  const saveNote = async (id) => {
+    try {
+      await authedRequest("patch", `/demo-bookings/${id}/notes`, { notes: noteDraft });
+      setBookings((bs) => bs.map((b) => (b.id === id ? { ...b, admin_notes: noteDraft } : b)));
+      setExpandedId(null);
+      toast.success("Nota salvata");
+    } catch {
+      toast.error("Salvataggio della nota non riuscito");
+    }
+  };
+
+  const exportCSV = () => {
+    const header = ["Data demo", "Ora", "Studio", "Contatto", "Email", "Telefono", "Poltrone", "Stato", "Note studio", "Richiesta il"];
+    const rows = bookings.map((b) => [
+      b.date,
+      b.time_slot,
+      b.clinic,
+      b.name,
+      b.email,
+      b.phone,
+      b.chairs || "",
+      STATUS[statusOf(b)].label,
+      b.admin_notes || "",
+      new Date(b.created_at).toLocaleString("it-IT"),
+    ]);
+    const csv = "\uFEFF" + [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+      .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `digitalcareai-demo-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Archivio esportato in CSV");
+  };
+
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await authedGet("/auth/me");
+        const { data } = await authedRequest("get", "/auth/me");
         setUser(data);
         await loadBookings();
       } catch {
         setUser(false);
       }
     })();
-  }, [authedGet, loadBookings]);
+  }, [authedRequest, loadBookings]);
 
   const login = async (e) => {
     e.preventDefault();
@@ -184,7 +226,6 @@ export default function Admin() {
     );
   }
 
-  const statusOf = (b) => b.status || "da_fare";
   const filtered = bookings.filter((b) => filter === "tutte" || statusOf(b) === filter);
   const todoCount = bookings.filter((b) => statusOf(b) === "da_fare").length;
 
@@ -202,6 +243,14 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              data-testid="admin-export-csv-button"
+              onClick={exportCSV}
+              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-teal2 to-neon px-4 py-2 text-xs font-bold text-ink transition-transform duration-300 hover:scale-[1.04]"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Esporta CSV
+            </button>
             <button
               data-testid="admin-refresh-button"
               onClick={loadBookings}
@@ -262,8 +311,8 @@ export default function Admin() {
         </div>
 
         <div className="rounded-3xl glass overflow-hidden" data-testid="admin-bookings-table">
-          <div className="hidden md:grid grid-cols-[100px_60px_1.1fr_1.3fr_110px_150px] gap-4 px-6 py-4 border-b border-white/8 bg-white/[0.03]">
-            {["Data demo", "Ora", "Studio", "Contatto", "Poltrone", "Stato"].map((h) => (
+          <div className="hidden md:grid grid-cols-[100px_60px_1.1fr_1.3fr_110px_180px] gap-4 px-6 py-4 border-b border-white/8 bg-white/[0.03]">
+            {["Data demo", "Ora", "Studio", "Contatto", "Poltrone", "Stato & Note"].map((h) => (
               <span key={h} className="font-mono2 text-[10px] uppercase tracking-[0.22em] text-dim">{h}</span>
             ))}
           </div>
@@ -277,49 +326,98 @@ export default function Admin() {
           {filtered.map((b) => {
             const s = statusOf(b);
             return (
-              <div
-                key={b.id}
-                data-testid="admin-booking-row"
-                className={`grid md:grid-cols-[100px_60px_1.1fr_1.3fr_110px_150px] gap-2 md:gap-4 px-6 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${s === "annullata" ? "opacity-50" : ""}`}
-              >
-                <div className="flex items-center gap-2 text-sm text-slate-100 font-medium">
-                  <CalendarDays className="w-3.5 h-3.5 text-neon md:hidden" />
-                  {new Date(`${b.date}T00:00:00`).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
-                </div>
-                <div className="font-mono2 text-sm text-neon">{b.time_slot}</div>
-                <div className="flex items-center gap-2 text-sm text-slate-200 min-w-0">
-                  <Building2 className="w-3.5 h-3.5 text-dim shrink-0" />
-                  <span className="truncate">{b.clinic}</span>
-                </div>
-                <div className="text-xs text-mist space-y-1 min-w-0">
-                  <p className="text-slate-200 font-medium text-sm truncate">{b.name}</p>
-                  <p className="flex items-center gap-1.5 truncate"><Mail className="w-3 h-3 text-dim shrink-0" />{b.email}</p>
-                  <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-dim shrink-0" />{b.phone}</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-mist">
-                  <Armchair className="w-3.5 h-3.5 text-dim shrink-0" />
-                  {b.chairs || "—"}
-                </div>
-                <div className="flex flex-col gap-1.5" data-testid="admin-status-cell">
-                  <span className={`w-fit inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono2 text-[9px] uppercase tracking-wider ${STATUS[s].cls}`}>
-                    {STATUS[s].label}
-                  </span>
-                  <div className="flex gap-1">
-                    {Object.entries(STATUS).map(([id, cfg]) => (
+              <div key={b.id}>
+                <div
+                  data-testid="admin-booking-row"
+                  className={`grid md:grid-cols-[100px_60px_1.1fr_1.3fr_110px_180px] gap-2 md:gap-4 px-6 py-4 ${expandedId === b.id ? "" : "border-b border-white/5"} hover:bg-white/[0.02] transition-colors ${s === "annullata" ? "opacity-50" : ""}`}
+                >
+                  <div className="flex items-center gap-2 text-sm text-slate-100 font-medium">
+                    <CalendarDays className="w-3.5 h-3.5 text-neon md:hidden" />
+                    {new Date(`${b.date}T00:00:00`).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                  </div>
+                  <div className="font-mono2 text-sm text-neon">{b.time_slot}</div>
+                  <div className="flex items-center gap-2 text-sm text-slate-200 min-w-0">
+                    <Building2 className="w-3.5 h-3.5 text-dim shrink-0" />
+                    <span className="truncate">{b.clinic}</span>
+                  </div>
+                  <div className="text-xs text-mist space-y-1 min-w-0">
+                    <p className="text-slate-200 font-medium text-sm truncate">{b.name}</p>
+                    <p className="flex items-center gap-1.5 truncate"><Mail className="w-3 h-3 text-dim shrink-0" />{b.email}</p>
+                    <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-dim shrink-0" />{b.phone}</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-mist">
+                    <Armchair className="w-3.5 h-3.5 text-dim shrink-0" />
+                    {b.chairs || "—"}
+                  </div>
+                  <div className="flex flex-col gap-1.5" data-testid="admin-status-cell">
+                    <span className={`w-fit inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono2 text-[9px] uppercase tracking-wider ${STATUS[s].cls}`}>
+                      {STATUS[s].label}
+                    </span>
+                    <div className="flex gap-1">
+                      {Object.entries(STATUS).map(([id, cfg]) => (
+                        <button
+                          key={id}
+                          data-testid={`status-btn-${id}`}
+                          title={`Segna come: ${cfg.label}`}
+                          onClick={() => updateStatus(b.id, id)}
+                          className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors duration-200 ${
+                            s === id ? cfg.cls : "border-white/10 text-dim hover:text-slate-200 hover:border-white/25"
+                          }`}
+                        >
+                          <cfg.icon className="w-3 h-3" />
+                        </button>
+                      ))}
                       <button
-                        key={id}
-                        data-testid={`status-btn-${id}`}
-                        title={`Segna come: ${cfg.label}`}
-                        onClick={() => updateStatus(b.id, id)}
+                        data-testid="admin-notes-toggle"
+                        title="Note sullo studio"
+                        onClick={() => openNotes(b)}
                         className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors duration-200 ${
-                          s === id ? cfg.cls : "border-white/10 text-dim hover:text-slate-200 hover:border-white/25"
+                          b.admin_notes
+                            ? "text-amber-300 border-amber-300/30 bg-amber-300/5"
+                            : "border-white/10 text-dim hover:text-slate-200 hover:border-white/25"
                         }`}
                       >
-                        <cfg.icon className="w-3 h-3" />
+                        <StickyNote className="w-3 h-3" />
                       </button>
-                    ))}
+                    </div>
+                    {b.admin_notes && expandedId !== b.id && (
+                      <p className="text-[11px] text-amber-200/70 italic leading-snug line-clamp-2" data-testid="admin-note-preview">
+                        {b.admin_notes}
+                      </p>
+                    )}
                   </div>
                 </div>
+                {expandedId === b.id && (
+                  <div className="px-6 pb-5 pt-1 border-b border-white/5 bg-white/[0.015]" data-testid="admin-notes-editor">
+                    <p className="font-mono2 text-[9px] uppercase tracking-[0.22em] text-dim mb-2">
+                      Nota sullo studio · {b.clinic}
+                    </p>
+                    <textarea
+                      data-testid="admin-notes-textarea"
+                      rows={2}
+                      value={noteDraft}
+                      onChange={(e) => setNoteDraft(e.target.value)}
+                      placeholder="Esito della chiamata, livello di interesse, prossimi passi..."
+                      className={`${inputCls} resize-none`}
+                    />
+                    <div className="flex justify-end gap-2 mt-2.5">
+                      <button
+                        data-testid="admin-notes-cancel"
+                        onClick={() => setExpandedId(null)}
+                        className="rounded-full border border-white/10 px-4 py-1.5 text-xs font-medium text-mist hover:text-slate-200 transition-colors"
+                      >
+                        Annulla
+                      </button>
+                      <button
+                        data-testid="admin-notes-save"
+                        onClick={() => saveNote(b.id)}
+                        className="rounded-full bg-gradient-to-r from-teal2 to-neon px-4 py-1.5 text-xs font-bold text-ink transition-transform duration-300 hover:scale-[1.04]"
+                      >
+                        Salva nota
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
