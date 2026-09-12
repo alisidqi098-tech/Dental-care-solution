@@ -32,7 +32,7 @@ export const Solution = () => (
         <ChapterTag number="02" label="La Soluzione" />
         <h2 className="font-heading font-bold tracking-tight text-3xl sm:text-4xl lg:text-5xl text-slate-50 max-w-3xl leading-[1.1]">
           Un ecosistema autonomo che lavora{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">mentre il tuo studio \u00E8 chiuso.</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">mentre il tuo studio è chiuso.</span>
         </h2>
       </Reveal>
 
