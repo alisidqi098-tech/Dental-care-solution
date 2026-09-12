@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ const CHAIRS = ["1-2 poltrone", "3-4 poltrone", "5-8 poltrone", "Oltre 8 poltron
 const fmtDay = (d) => d.toLocaleDateString("it-IT", { weekday: "short" });
 const fmtNum = (d) => d.toLocaleDateString("it-IT", { day: "numeric" });
 const fmtMonth = (d) => d.toLocaleDateString("it-IT", { month: "short" });
+const fmtISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export const BookingForm = () => {
   const navigate = useNavigate();
@@ -34,6 +35,16 @@ export const BookingForm = () => {
   const [slot, setSlot] = useState(null);
   const [form, setForm] = useState({ name: "", clinic: "", email: "", phone: "", chairs: CHAIRS[0], notes: "" });
   const [busy, setBusy] = useState(false);
+  const [busySlots, setBusySlots] = useState([]);
+
+  useEffect(() => {
+    if (!date) return;
+    setSlot(null);
+    axios
+      .get(`${API}/demo-bookings/busy`, { params: { date: fmtISO(date) } })
+      .then(({ data }) => setBusySlots(data.busy || []))
+      .catch(() => setBusySlots([]));
+  }, [date]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -46,7 +57,7 @@ export const BookingForm = () => {
     try {
       const payload = {
         ...form,
-        date: date.toISOString().slice(0, 10),
+        date: fmtISO(date),
         time_slot: slot,
       };
       await axios.post(`${API}/demo-booking`, payload);
@@ -156,21 +167,28 @@ export const BookingForm = () => {
                   <Clock className="w-3.5 h-3.5 text-neon" /> 2 · Scegli l'orario
                 </p>
                 <div className="grid grid-cols-4 gap-2">
-                  {SLOTS.map((s) => (
-                    <button
-                      type="button"
-                      key={s}
-                      data-testid="booking-time-slot-btn"
-                      onClick={() => setSlot(s)}
-                      className={`rounded-lg border py-2.5 font-mono2 text-sm transition-all duration-300 ${
-                        slot === s
-                          ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink font-semibold glow-cyan"
-                          : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {SLOTS.map((s) => {
+                    const taken = busySlots.includes(s);
+                    return (
+                      <button
+                        type="button"
+                        key={s}
+                        data-testid="booking-time-slot-btn"
+                        disabled={taken}
+                        title={taken ? "Orario già prenotato" : undefined}
+                        onClick={() => setSlot(s)}
+                        className={`rounded-lg border py-2.5 font-mono2 text-sm transition-all duration-300 ${
+                          taken
+                            ? "border-white/5 bg-card2/30 text-dim/50 line-through cursor-not-allowed"
+                            : slot === s
+                              ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink font-semibold glow-cyan"
+                              : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

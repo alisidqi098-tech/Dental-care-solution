@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Loader2, LogOut, ShieldCheck, RefreshCw,
   CalendarDays, Building2, Phone, Mail, Armchair,
-  Clock, CheckCircle2, XCircle, Download, StickyNote, Send,
+  Clock, CheckCircle2, XCircle, Download, StickyNote, Send, Trash2,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -113,6 +113,17 @@ export default function Admin() {
       }
     } catch {
       toast.error("Invio del riepilogo non riuscito");
+    }
+  };
+
+  const deleteBooking = async (id) => {
+    if (!window.confirm("Eliminare definitivamente questa prenotazione dall'archivio?")) return;
+    try {
+      await authedRequest("delete", `/demo-bookings/${id}`);
+      setBookings((bs) => bs.filter((b) => b.id !== id));
+      toast.success("Prenotazione eliminata");
+    } catch {
+      toast.error("Eliminazione non riuscita");
     }
   };
 
@@ -400,6 +411,14 @@ export default function Admin() {
                         }`}
                       >
                         <StickyNote className="w-3 h-3" />
+                      </button>
+                      <button
+                        data-testid="admin-delete-button"
+                        title="Elimina prenotazione"
+                        onClick={() => deleteBooking(b.id)}
+                        className="w-6 h-6 rounded-md border border-white/10 flex items-center justify-center text-dim hover:text-red-400 hover:border-red-400/40 transition-colors duration-200"
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                     {b.admin_notes && expandedId !== b.id && (
