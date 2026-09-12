@@ -247,7 +247,7 @@ export default function Admin() {
             <ShieldCheck className="w-6 h-6 text-neon" />
           </div>
           <h1 className="font-heading font-bold text-2xl text-slate-50 mb-2">Area Riservata</h1>
-          <p className="text-sm text-mist mb-8">Archivio delle demo prenotate. Accesso riservato al team DigitalCareAI.</p>
+          <p className="text-sm text-mist mb-8">Archivio delle demo prenotate. Accesso riservato al team Digital Care AI.</p>
           <form onSubmit={login} className="space-y-4" data-testid="admin-login-form">
             <input
               data-testid="admin-login-email-input"

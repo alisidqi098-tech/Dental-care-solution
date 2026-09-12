@@ -1,4 +1,4 @@
-# PRD — DigitalCareAI (ex Dental Care Solution AI) Landing Page
+# PRD — Digital Care AI (ex Dental Care Solution AI) Landing Page
 
 ## Problem Statement (original)
 Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: titolari di studi dentistici e direttori sanitari. Obiettivo unico: prenotazione videochiamata demo di 15 minuti. Tema scuro (antracite/blu notte) con accenti neon ciano/verde acqua. Struttura: Hero, Problema (empatia), Soluzione (3 step), Tabella confronto, Social proof/sicurezza, Bottom CTA con calendario prenotazione.
