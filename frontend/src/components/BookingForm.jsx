@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, Clock, CheckCircle2, Loader2, Video, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal, ChapterTag } from "./Reveal";
@@ -12,9 +13,9 @@ const CHAIRS = ["1-2 poltrone", "3-4 poltrone", "5-8 poltrone", "Oltre 8 poltron
 const fmtDay = (d) => d.toLocaleDateString("it-IT", { weekday: "short" });
 const fmtNum = (d) => d.toLocaleDateString("it-IT", { day: "numeric" });
 const fmtMonth = (d) => d.toLocaleDateString("it-IT", { month: "short" });
-const fmtFull = (d) => d.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
 
 export const BookingForm = () => {
+  const navigate = useNavigate();
   const days = useMemo(() => {
     const out = [];
     const d = new Date();
@@ -33,7 +34,6 @@ export const BookingForm = () => {
   const [slot, setSlot] = useState(null);
   const [form, setForm] = useState({ name: "", clinic: "", email: "", phone: "", chairs: CHAIRS[0], notes: "" });
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -49,11 +49,10 @@ export const BookingForm = () => {
         date: date.toISOString().slice(0, 10),
         time_slot: slot,
       };
-      const { data } = await axios.post(`${API}/demo-booking`, payload);
-      setDone({ ...payload, id: data.id });
+      await axios.post(`${API}/demo-booking`, payload);
+      navigate("/grazie", { state: payload });
     } catch (err) {
-      toast.error("Qualcosa \u00E8 andato storto. Riprova tra un attimo.");
-    } finally {
+      toast.error("Qualcosa è andato storto. Riprova tra un attimo.");
       setBusy(false);
     }
   };
@@ -93,135 +92,114 @@ export const BookingForm = () => {
 
         <Reveal delay={0.15} className="min-w-0">
           <div className="rounded-3xl glass glow-cyan p-6 sm:p-9 overflow-hidden" data-testid="booking-calendar">
-            <AnimatePresence mode="wait">
-              {done ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                  className="text-center py-12"
-                  data-testid="booking-success-message"
-                >
-                  <div className="mx-auto w-16 h-16 rounded-full bg-mint/15 border border-mint/30 flex items-center justify-center mb-6 glow-cyan">
-                    <CheckCircle2 className="w-8 h-8 text-mint" />
-                  </div>
-                  <h3 className="font-heading font-bold text-2xl text-slate-50 mb-3">Demo prenotata.</h3>
-                  <p className="text-mist text-sm max-w-sm mx-auto leading-relaxed">
-                    Ti aspettiamo {fmtFull(new Date(done.date))} alle {done.time_slot}. Riceverai il link della
-                    videochiamata via email e WhatsApp.
-                  </p>
-                  <div className="mt-7 inline-flex items-center gap-3 rounded-full bg-neon/5 border border-neon/25 px-5 py-2.5">
-                    <CalendarDays className="w-4 h-4 text-neon" />
-                    <span className="font-mono2 text-xs text-neon">
-                      {new Date(done.date).toLocaleDateString("it-IT")} · {done.time_slot} · {done.clinic}
-                    </span>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.form key="form" onSubmit={submit} exit={{ opacity: 0, scale: 0.97 }} className="space-y-7">
-                  <div>
-                    <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4 flex items-center gap-2">
-                      <CalendarDays className="w-3.5 h-3.5 text-neon" /> 1 · Scegli il giorno
-                    </p>
-                    <div className="relative group/strip">
-                      <button
-                        type="button"
-                        data-testid="booking-days-prev"
-                        onClick={() => scrollStrip(-1)}
-                        aria-label="Giorni precedenti"
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <div
-                        ref={stripRef}
-                        className="flex gap-2 overflow-x-auto px-7 pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                      >
-                        {days.map((d) => {
-                          const active = date && d.toDateString() === date.toDateString();
-                          return (
-                            <button
-                              type="button"
-                              key={d.toISOString()}
-                              data-testid="booking-day-btn"
-                              onClick={() => setDate(d)}
-                              className={`shrink-0 w-[76px] rounded-xl border py-2.5 px-1 text-center transition-all duration-300 ${
-                                active
-                                  ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink glow-cyan"
-                                  : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
-                              }`}
-                            >
-                              <span className={`block text-[9px] uppercase tracking-wider ${active ? "text-ink/70" : "text-dim"}`}>{fmtDay(d)}</span>
-                              <span className="block font-heading font-bold text-lg leading-tight">{fmtNum(d)}</span>
-                              <span className={`block text-[9px] uppercase ${active ? "text-ink/70" : "text-dim"}`}>{fmtMonth(d)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <button
-                        type="button"
-                        data-testid="booking-days-next"
-                        onClick={() => scrollStrip(1)}
-                        aria-label="Giorni successivi"
-                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4 flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-neon" /> 2 · Scegli l'orario
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {SLOTS.map((s) => (
+            <motion.form
+              onSubmit={submit}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-7"
+            >
+              <div>
+                <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4 flex items-center gap-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-neon" /> 1 · Scegli il giorno
+                </p>
+                <div className="relative group/strip">
+                  <button
+                    type="button"
+                    data-testid="booking-days-prev"
+                    onClick={() => scrollStrip(-1)}
+                    aria-label="Giorni precedenti"
+                    className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div
+                    ref={stripRef}
+                    className="flex gap-2 overflow-x-auto px-7 pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {days.map((d) => {
+                      const active = date && d.toDateString() === date.toDateString();
+                      return (
                         <button
                           type="button"
-                          key={s}
-                          data-testid="booking-time-slot-btn"
-                          onClick={() => setSlot(s)}
-                          className={`rounded-lg border py-2.5 font-mono2 text-sm transition-all duration-300 ${
-                            slot === s
-                              ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink font-semibold glow-cyan"
+                          key={d.toISOString()}
+                          data-testid="booking-day-btn"
+                          onClick={() => setDate(d)}
+                          className={`shrink-0 w-[76px] rounded-xl border py-2.5 px-1 text-center transition-all duration-300 ${
+                            active
+                              ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink glow-cyan"
                               : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
                           }`}
                         >
-                          {s}
+                          <span className={`block text-[9px] uppercase tracking-wider ${active ? "text-ink/70" : "text-dim"}`}>{fmtDay(d)}</span>
+                          <span className="block font-heading font-bold text-lg leading-tight">{fmtNum(d)}</span>
+                          <span className={`block text-[9px] uppercase ${active ? "text-ink/70" : "text-dim"}`}>{fmtMonth(d)}</span>
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
-
-                  <div>
-                    <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4">3 · I tuoi dati</p>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <input data-testid="booking-input-name" className={inputCls} placeholder="Nome e Cognome *" value={form.name} onChange={set("name")} />
-                      <input data-testid="booking-input-clinic" className={inputCls} placeholder="Nome dello Studio *" value={form.clinic} onChange={set("clinic")} />
-                      <input data-testid="booking-input-email" type="email" className={inputCls} placeholder="Email professionale *" value={form.email} onChange={set("email")} />
-                      <input data-testid="booking-input-phone" className={inputCls} placeholder="Telefono WhatsApp *" value={form.phone} onChange={set("phone")} />
-                      <select data-testid="booking-select-chairs" className={`${inputCls} sm:col-span-2 appearance-none cursor-pointer`} value={form.chairs} onChange={set("chairs")}>
-                        {CHAIRS.map((c) => (
-                          <option key={c} value={c} className="bg-panel">{c}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
                   <button
-                    type="submit"
-                    disabled={busy}
-                    data-testid="booking-submit-button"
-                    className="w-full flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-teal2 to-neon py-4 font-heading font-bold text-ink text-base transition-transform duration-300 hover:scale-[1.02] glow-cyan-strong disabled:opacity-60 disabled:hover:scale-100"
+                    type="button"
+                    data-testid="booking-days-next"
+                    onClick={() => scrollStrip(1)}
+                    aria-label="Giorni successivi"
+                    className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
                   >
-                    {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
-                    {busy ? "Prenotazione in corso..." : `Blocca la mia Demo${date && slot ? ` · ${fmtNum(date)} ${fmtMonth(date)} ${slot}` : ""}`}
+                    <ChevronRight className="w-4 h-4" />
                   </button>
-                  <p className="text-center text-[11px] text-dim">Nessun impegno. Nessun dato ceduto a terzi. Solo 15 minuti di automazione pura.</p>
-                </motion.form>
-              )}
-            </AnimatePresence>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4 flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-neon" /> 2 · Scegli l'orario
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {SLOTS.map((s) => (
+                    <button
+                      type="button"
+                      key={s}
+                      data-testid="booking-time-slot-btn"
+                      onClick={() => setSlot(s)}
+                      className={`rounded-lg border py-2.5 font-mono2 text-sm transition-all duration-300 ${
+                        slot === s
+                          ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink font-semibold glow-cyan"
+                          : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4">3 · I tuoi dati</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <input data-testid="booking-input-name" className={inputCls} placeholder="Nome e Cognome *" value={form.name} onChange={set("name")} />
+                  <input data-testid="booking-input-clinic" className={inputCls} placeholder="Nome dello Studio *" value={form.clinic} onChange={set("clinic")} />
+                  <input data-testid="booking-input-email" type="email" className={inputCls} placeholder="Email professionale *" value={form.email} onChange={set("email")} />
+                  <input data-testid="booking-input-phone" className={inputCls} placeholder="Telefono WhatsApp *" value={form.phone} onChange={set("phone")} />
+                  <select data-testid="booking-select-chairs" className={`${inputCls} sm:col-span-2 appearance-none cursor-pointer`} value={form.chairs} onChange={set("chairs")}>
+                    {CHAIRS.map((c) => (
+                      <option key={c} value={c} className="bg-panel">{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                data-testid="booking-submit-button"
+                className="w-full flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-teal2 to-neon py-4 font-heading font-bold text-ink text-base transition-transform duration-300 hover:scale-[1.02] glow-cyan-strong disabled:opacity-60 disabled:hover:scale-100"
+              >
+                {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+                {busy ? "Prenotazione in corso..." : `Blocca la mia Demo${date && slot ? ` · ${fmtNum(date)} ${fmtMonth(date)} ${slot}` : ""}`}
+              </button>
+              <p className="text-center text-[11px] text-dim">Nessun impegno. Nessun dato ceduto a terzi. Solo 15 minuti di automazione pura.</p>
+            </motion.form>
           </div>
         </Reveal>
       </div>

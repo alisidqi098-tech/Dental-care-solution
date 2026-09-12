@@ -22,6 +22,10 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
 
+## Implemented (2026-09-12, update 5)
+- Riepilogo mattutino al team: ogni giorno alle 08:00 (Europe/Rome) email a digitalcaresolution24.7@gmail.com con le demo del giorno (escluse annullate); deduplica via collection settings; endpoint manuale POST /api/admin/send-team-digest + pulsante "Riepilogo oggi" in /admin
+- Pagina ringraziamento dedicata /grazie dopo la prenotazione (riepilogo data/ora/studio/email + 3 step "cosa succede ora"), sostituisce la conferma inline
+
 ## Implemented (2026-09-12, update 4)
 - Export CSV dall'area riservata (pulsante "Esporta CSV", separatore ;, BOM per Excel, include stato e note)
 - Note sullo studio: PATCH /api/demo-bookings/{id}/notes (protetto), editor inline espandibile in /admin con anteprima nota

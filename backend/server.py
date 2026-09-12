@@ -225,8 +225,46 @@ def doctor_reminder_html(b: dict) -> str:
     )
 
 
-# ---------- Promemoria automatico 24h prima ----------
+# ---------- Promemoria automatico 24h prima + riepilogo team ----------
 ROME = ZoneInfo("Europe/Rome")
+
+
+def team_digest_html(todays: list, today_label: str) -> str:
+    rows = "".join(
+        f'<tr><td style="padding:6px 12px 6px 0;color:#64748b;white-space:nowrap">{escape(b["time_slot"])}</td>'
+        f'<td style="padding:6px 12px 6px 0"><strong>{escape(b["clinic"])}</strong></td>'
+        f'<td style="padding:6px 12px 6px 0">{escape(b["name"])}</td>'
+        f'<td style="padding:6px 0">{escape(b["phone"])}</td></tr>'
+        for b in sorted(todays, key=lambda x: x["time_slot"])
+    )
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
+        f'<h1 style="font-size:20px;margin:0 0 8px">Demo di oggi: {len(todays)} in programma</h1>'
+        f'<p style="font-size:14px;color:#64748b;margin:0 0 16px">{escape(today_label)}</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
+        f'{rows}</table>'
+        '<p style="font-size:14px;line-height:1.6;margin:0">Buone chiamate. Le demo annullate non sono incluse.</p>'
+        f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Riepilogo automatico di {escape(EMAIL_FROM_NAME)}.</p>'
+        '</td></tr></table>'
+    )
+
+
+async def send_team_digest() -> int:
+    if not TEAM_NOTIFICATION_EMAIL:
+        return 0
+    now = datetime.now(ROME)
+    today = now.date().isoformat()
+    todays = await db.demo_bookings.find({"date": today}, {"_id": 0}).to_list(100)
+    todays = [b for b in todays if b.get("status", "da_fare") != "annullata"]
+    if todays:
+        await send_email(
+            to=TEAM_NOTIFICATION_EMAIL,
+            subject=f"Oggi hai {len(todays)} demo \u2014 riepilogo del {format_date_it(today)}",
+            html=team_digest_html(todays, format_date_it(today)),
+        )
+        logger.info(f"Riepilogo team inviato: {len(todays)} demo di oggi")
+    return len(todays)
 
 
 async def reminder_loop():
@@ -255,6 +293,17 @@ async def reminder_loop():
                         logger.info(f"Promemoria 24h inviato a {b['email']}")
                     except Exception as e:
                         logger.error(f"Promemoria fallito per {b.get('id')}: {e}")
+            if now.hour == 8 and now.minute < 15:
+                today_iso = now.date().isoformat()
+                marker = await db.settings.find_one({"key": "team_digest_date"})
+                if not marker or marker.get("value") != today_iso:
+                    try:
+                        await send_team_digest()
+                    except Exception as e:
+                        logger.error(f"Riepilogo team fallito: {e}")
+                    await db.settings.update_one(
+                        {"key": "team_digest_date"}, {"$set": {"value": today_iso}}, upsert=True
+                    )
         except Exception as e:
             logger.error(f"Reminder loop error: {e}")
         await asyncio.sleep(900)
@@ -440,6 +489,12 @@ async def update_booking_notes(booking_id: str, input: NotesUpdate, user=Depends
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Prenotazione non trovata")
     return {"id": booking_id, "admin_notes": input.notes}
+
+
+@api_router.post("/admin/send-team-digest")
+async def trigger_team_digest(user=Depends(get_current_user)):
+    count = await send_team_digest()
+    return {"sent": count > 0, "demo_count": count}
 
 
 @api_router.post("/auth/login")

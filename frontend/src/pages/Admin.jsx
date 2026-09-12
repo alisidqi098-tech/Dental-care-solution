@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Loader2, LogOut, ShieldCheck, RefreshCw,
   CalendarDays, Building2, Phone, Mail, Armchair,
-  Clock, CheckCircle2, XCircle, Download, StickyNote,
+  Clock, CheckCircle2, XCircle, Download, StickyNote, Send,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -100,6 +100,19 @@ export default function Admin() {
       toast.success("Nota salvata");
     } catch {
       toast.error("Salvataggio della nota non riuscito");
+    }
+  };
+
+  const sendDigest = async () => {
+    try {
+      const { data } = await authedRequest("post", "/admin/send-team-digest");
+      if (data.demo_count > 0) {
+        toast.success(`Riepilogo inviato al team: ${data.demo_count} demo in programma oggi`);
+      } else {
+        toast.info("Nessuna demo in programma oggi: nessuna email inviata");
+      }
+    } catch {
+      toast.error("Invio del riepilogo non riuscito");
     }
   };
 
@@ -243,6 +256,15 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              data-testid="admin-digest-button"
+              onClick={sendDigest}
+              title="Invia ora al team il riepilogo delle demo di oggi"
+              className="flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-medium text-mist hover:text-neon hover:border-neon/40 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Riepilogo oggi
+            </button>
             <button
               data-testid="admin-export-csv-button"
               onClick={exportCSV}

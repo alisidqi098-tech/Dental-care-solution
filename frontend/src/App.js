@@ -13,6 +13,7 @@ import { Trust } from "@/components/Trust";
 import { BookingForm } from "@/components/BookingForm";
 import { Footer } from "@/components/Footer";
 import Admin from "@/pages/Admin";
+import ThankYou from "@/pages/ThankYou";
 
 const Home = () => {
   useEffect(() => {
@@ -55,6 +56,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/grazie" element={<ThankYou />} />
         </Routes>
       </BrowserRouter>
       <Toaster theme="dark" position="bottom-right" toastOptions={{ style: { background: "#111827", border: "1px solid rgba(0,242,254,0.25)", color: "#f8fafc" } }} />
