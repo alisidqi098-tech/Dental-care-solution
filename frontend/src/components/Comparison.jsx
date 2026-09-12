@@ -15,7 +15,7 @@ export const Comparison = () => (
         <ChapterTag number="03" label="Il Confronto" />
         <h2 className="font-heading font-bold tracking-tight text-3xl sm:text-4xl lg:text-5xl text-slate-50 max-w-3xl leading-[1.1]">
           Metodo tradizionale vs{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">Dental Care Solution AI</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">DigitalCareAI</span>
         </h2>
       </Reveal>
 
@@ -24,7 +24,7 @@ export const Comparison = () => (
           <div className="grid grid-cols-[1fr_1fr_1fr] max-md:grid-cols-[0.9fr_1fr_1fr] bg-white/[0.03] border-b border-white/8">
             <div className="p-5 sm:p-6 font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim self-center">Aspetto</div>
             <div className="p-5 sm:p-6 font-heading font-semibold text-sm sm:text-base text-mist border-l border-white/8 self-center">Metodo Tradizionale</div>
-            <div className="p-5 sm:p-6 font-heading font-bold text-sm sm:text-base text-neon border-l border-neon/20 bg-neon/[0.04] self-center">Dental Care AI</div>
+            <div className="p-5 sm:p-6 font-heading font-bold text-sm sm:text-base text-neon border-l border-neon/20 bg-neon/[0.04] self-center">DigitalCareAI</div>
           </div>
           {rows.map((r, i) => (
             <div

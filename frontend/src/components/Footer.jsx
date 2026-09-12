@@ -9,14 +9,14 @@ export const Footer = () => (
         </div>
         <div className="leading-none">
           <span className="font-heading font-bold text-sm text-slate-50 block">
-            Dental Care <span className="text-neon">AI</span>
+            DigitalCare<span className="text-neon">AI</span>
           </span>
           <span className="font-mono2 text-[9px] uppercase tracking-[0.28em] text-dim">Solution</span>
         </div>
       </div>
       <div className="flex flex-col items-center gap-3">
         <p className="text-xs text-dim text-center">
-          © {new Date().getFullYear()} Dental Care Solution AI · Pagamenti sicuri via Stripe · GDPR Compliant
+          © {new Date().getFullYear()} DigitalCareAI · Pagamenti sicuri via Stripe · GDPR Compliant
         </p>
         <a href="/admin" data-testid="footer-admin-link" className="font-mono2 text-[10px] uppercase tracking-[0.2em] text-dim/60 hover:text-neon transition-colors">
           Area Riservata

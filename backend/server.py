@@ -6,6 +6,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 import os
 import re
+import asyncio
 import ipaddress
 import logging
 import uuid
@@ -15,6 +16,7 @@ import httpx
 from html import escape
 from html.parser import HTMLParser
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request, Response
@@ -151,7 +153,7 @@ def doctor_confirm_html(b) -> str:
         'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
         f'<h1 style="font-size:20px;margin:0 0 16px">Demo confermata, {escape(b.name)}</h1>'
         '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">La tua videochiamata dimostrativa '
-        'di <strong>15 minuti</strong> con Dental Care Solution AI &egrave; prenotata.</p>'
+        'di <strong>15 minuti</strong> con DigitalCareAI &egrave; prenotata.</p>'
         '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b.date))}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b.time_slot)}</strong></td></tr>'
@@ -186,6 +188,61 @@ def team_notify_html(b) -> str:
         f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Notifica automatica di {escape(EMAIL_FROM_NAME)}.</p>'
         '</td></tr></table>'
     )
+
+
+def doctor_reminder_html(b: dict) -> str:
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td '
+        'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
+        f'<h1 style="font-size:20px;margin:0 0 16px">Ci vediamo domani, {escape(b["name"])}</h1>'
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Ti ricordiamo la tua videochiamata '
+        'dimostrativa di <strong>15 minuti</strong> con DigitalCareAI.</p>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b["date"]))}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b["time_slot"])}</strong></td></tr>'
+        f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Studio</td><td><strong>{escape(b["clinic"])}</strong></td></tr></table>'
+        '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Tieni il telefono a portata di mano: '
+        'durante la chiamata vedrai una simulazione in diretta del nostro assistente AI su WhatsApp. '
+        "Se hai cambiato programmi, rispondi pure a questa email e riprogrammiamo l'appuntamento.</p>"
+        f'<p style="font-size:12px;color:#94a3b8;margin:24px 0 0">Inviato da {escape(EMAIL_FROM_NAME)}. '
+        'Non chiediamo mai password o dati di pagamento via email.</p>'
+        '</td></tr></table>'
+    )
+
+
+# ---------- Promemoria automatico 24h prima ----------
+ROME = ZoneInfo("Europe/Rome")
+
+
+async def reminder_loop():
+    while True:
+        try:
+            now = datetime.now(ROME)
+            candidates = await db.demo_bookings.find({"reminder_sent_at": None}, {"_id": 0}).to_list(1000)
+            for b in candidates:
+                if b.get("status", "da_fare") == "annullata":
+                    continue
+                try:
+                    start = datetime.strptime(f"{b['date']} {b['time_slot']}", "%Y-%m-%d %H:%M").replace(tzinfo=ROME)
+                except Exception:
+                    continue
+                if start - timedelta(hours=24) <= now < start:
+                    try:
+                        await send_email(
+                            to=b["email"],
+                            subject=f"Promemoria: domani la tua demo ({format_date_it(b['date'])} ore {b['time_slot']})",
+                            html=doctor_reminder_html(b),
+                        )
+                        await db.demo_bookings.update_one(
+                            {"id": b["id"]},
+                            {"$set": {"reminder_sent_at": datetime.now(timezone.utc).isoformat()}},
+                        )
+                        logger.info(f"Promemoria 24h inviato a {b['email']}")
+                    except Exception as e:
+                        logger.error(f"Promemoria fallito per {b.get('id')}: {e}")
+        except Exception as e:
+            logger.error(f"Reminder loop error: {e}")
+        await asyncio.sleep(900)
 
 
 # ---------- Auth (JWT + bcrypt) ----------
@@ -266,6 +323,9 @@ async def seed_admin():
 
 
 # ---------- Models ----------
+BOOKING_STATUSES = ("da_fare", "fatta", "annullata")
+
+
 class DemoBooking(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -278,6 +338,8 @@ class DemoBooking(BaseModel):
     date: str
     time_slot: str
     notes: Optional[str] = None
+    status: str = "da_fare"
+    reminder_sent_at: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -292,6 +354,10 @@ class DemoBookingCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class StatusUpdate(BaseModel):
+    status: str
+
+
 class LoginInput(BaseModel):
     email: str
     password: str
@@ -300,7 +366,7 @@ class LoginInput(BaseModel):
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
-    return {"message": "Dental Care Solution AI API"}
+    return {"message": "DigitalCareAI API"}
 
 
 @api_router.post("/demo-booking", response_model=DemoBooking)
@@ -312,7 +378,7 @@ async def create_demo_booking(input: DemoBookingCreate):
     try:
         await send_email(
             to=booking.email,
-            subject="La tua demo Dental Care Solution AI \u00e8 confermata",
+            subject="La tua demo DigitalCareAI \u00e8 confermata",
             html=doctor_confirm_html(booking),
         )
     except Exception as e:
@@ -336,6 +402,16 @@ async def get_demo_bookings(user=Depends(get_current_user)):
         if isinstance(b.get('created_at'), str):
             b['created_at'] = datetime.fromisoformat(b['created_at'])
     return bookings
+
+
+@api_router.patch("/demo-bookings/{booking_id}/status")
+async def update_booking_status(booking_id: str, input: StatusUpdate, user=Depends(get_current_user)):
+    if input.status not in BOOKING_STATUSES:
+        raise HTTPException(status_code=400, detail="Stato non valido")
+    res = await db.demo_bookings.update_one({"id": booking_id}, {"$set": {"status": input.status}})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Prenotazione non trovata")
+    return {"id": booking_id, "status": input.status}
 
 
 @api_router.post("/auth/login")
@@ -411,6 +487,7 @@ async def startup_db():
     await db.users.create_index("email", unique=True)
     await db.login_attempts.create_index("identifier")
     await seed_admin()
+    asyncio.create_task(reminder_loop())
 
 
 @app.on_event("shutdown")

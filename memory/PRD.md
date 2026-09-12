@@ -1,4 +1,4 @@
-# PRD — Dental Care Solution AI Landing Page
+# PRD — DigitalCareAI (ex Dental Care Solution AI) Landing Page
 
 ## Problem Statement (original)
 Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: titolari di studi dentistici e direttori sanitari. Obiettivo unico: prenotazione videochiamata demo di 15 minuti. Tema scuro (antracite/blu notte) con accenti neon ciano/verde acqua. Struttura: Hero, Problema (empatia), Soluzione (3 step), Tabella confronto, Social proof/sicurezza, Bottom CTA con calendario prenotazione.
@@ -21,6 +21,12 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 5. Sezione fiducia (privacy, Stripe, integrazione invisibile)
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
+
+## Implemented (2026-09-12, update 3)
+- REBRAND COMPLETO: "Dental Care Solution AI" → "DigitalCareAI" ovunque (logo, footer, tabella confronto, titolo pagina, meta, email, EMAIL_FROM_NAME, API)
+- Promemoria automatico 24h prima della demo al medico (loop scheduler ogni 15 min, fuso Europe/Rome, salta annullate, campo reminder_sent_at)
+- Stati demo: da_fare/fatta/annullata con PATCH protetto /api/demo-bookings/{id}/status, badge + bottoni rapidi + filtri in /admin
+- Notifica WhatsApp: RIMANDATA (utente senza credenziali Twilio per ora)
 
 ## Implemented (2026-09-12, update 2)
 - Email transazionali (Resend gestito Emergent): conferma automatica al medico + notifica immediata al team (digitalcaresolution24.7@gmail.com) a ogni nuova demo, template HTML italiani con guardrail di sicurezza

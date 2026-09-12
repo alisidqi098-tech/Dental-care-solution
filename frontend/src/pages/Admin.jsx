@@ -2,13 +2,28 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   ArrowLeft, Loader2, LogOut, ShieldCheck, RefreshCw,
   CalendarDays, Building2, Phone, Mail, Armchair,
+  Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 axios.defaults.withCredentials = true;
+
+const STATUS = {
+  da_fare: { label: "Da fare", icon: Clock, cls: "text-neon border-neon/30 bg-neon/5" },
+  fatta: { label: "Fatta", icon: CheckCircle2, cls: "text-mint border-mint/30 bg-mint/5" },
+  annullata: { label: "Annullata", icon: XCircle, cls: "text-red-400 border-red-400/30 bg-red-400/5" },
+};
+
+const FILTERS = [
+  { id: "tutte", label: "Tutte" },
+  { id: "da_fare", label: "Da fare" },
+  { id: "fatta", label: "Fatte" },
+  { id: "annullata", label: "Annullate" },
+];
 
 function formatApiErrorDetail(detail) {
   if (detail == null) return "Qualcosa è andato storto. Riprova.";
@@ -30,6 +45,7 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
+  const [filter, setFilter] = useState("tutte");
 
   const authedGet = useCallback(async (path) => {
     try {
@@ -52,6 +68,25 @@ export default function Admin() {
       setLoadingList(false);
     }
   }, [authedGet]);
+
+  const updateStatus = async (id, status) => {
+    try {
+      try {
+        await axios.patch(`${API}/demo-bookings/${id}/status`, { status });
+      } catch (e) {
+        if (e.response?.status === 401) {
+          await axios.post(`${API}/auth/refresh`);
+          await axios.patch(`${API}/demo-bookings/${id}/status`, { status });
+        } else {
+          throw e;
+        }
+      }
+      setBookings((bs) => bs.map((b) => (b.id === id ? { ...b, status } : b)));
+      toast.success(`Demo segnata come "${STATUS[status].label}"`);
+    } catch {
+      toast.error("Aggiornamento dello stato non riuscito");
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -108,7 +143,7 @@ export default function Admin() {
             <ShieldCheck className="w-6 h-6 text-neon" />
           </div>
           <h1 className="font-heading font-bold text-2xl text-slate-50 mb-2">Area Riservata</h1>
-          <p className="text-sm text-mist mb-8">Archivio delle demo prenotate. Accesso riservato al team Dental Care AI.</p>
+          <p className="text-sm text-mist mb-8">Archivio delle demo prenotate. Accesso riservato al team DigitalCareAI.</p>
           <form onSubmit={login} className="space-y-4" data-testid="admin-login-form">
             <input
               data-testid="admin-login-email-input"
@@ -149,6 +184,10 @@ export default function Admin() {
     );
   }
 
+  const statusOf = (b) => b.status || "da_fare";
+  const filtered = bookings.filter((b) => filter === "tutte" || statusOf(b) === filter);
+  const todoCount = bookings.filter((b) => statusOf(b) === "da_fare").length;
+
   return (
     <div className="min-h-screen bg-ink grid-bg noise relative" data-testid="admin-dashboard">
       <header className="border-b border-white/5 glass sticky top-0 z-40">
@@ -184,7 +223,7 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
-        <div className="grid sm:grid-cols-3 gap-4 mb-10">
+        <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <div className="rounded-2xl border border-white/8 bg-card2/40 px-6 py-5">
             <p className="font-heading font-extrabold text-3xl text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon" data-testid="admin-stat-total">
               {bookings.length}
@@ -198,50 +237,92 @@ export default function Admin() {
             <p className="text-xs text-dim mt-1">In programma da oggi in poi</p>
           </div>
           <div className="rounded-2xl border border-white/8 bg-card2/40 px-6 py-5">
-            <p className="font-heading font-extrabold text-3xl text-slate-50" data-testid="admin-stat-latest">
-              {bookings[0] ? new Date(bookings[0].date).toLocaleDateString("it-IT") : "—"}
+            <p className="font-heading font-extrabold text-3xl text-slate-50" data-testid="admin-stat-todo">
+              {todoCount}
             </p>
-            <p className="text-xs text-dim mt-1">Data della prossima richiesta</p>
+            <p className="text-xs text-dim mt-1">Ancora da fare</p>
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2 mb-6" data-testid="admin-status-filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              data-testid={`admin-filter-${f.id}`}
+              onClick={() => setFilter(f.id)}
+              className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors duration-300 ${
+                filter === f.id
+                  ? "border-transparent bg-gradient-to-r from-teal2 to-neon text-ink"
+                  : "border-white/10 text-mist hover:text-neon hover:border-neon/40"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div className="rounded-3xl glass overflow-hidden" data-testid="admin-bookings-table">
-          <div className="hidden md:grid grid-cols-[110px_70px_1.2fr_1.4fr_130px] gap-4 px-6 py-4 border-b border-white/8 bg-white/[0.03]">
-            {["Data demo", "Ora", "Studio", "Contatto", "Poltrone"].map((h) => (
+          <div className="hidden md:grid grid-cols-[100px_60px_1.1fr_1.3fr_110px_150px] gap-4 px-6 py-4 border-b border-white/8 bg-white/[0.03]">
+            {["Data demo", "Ora", "Studio", "Contatto", "Poltrone", "Stato"].map((h) => (
               <span key={h} className="font-mono2 text-[10px] uppercase tracking-[0.22em] text-dim">{h}</span>
             ))}
           </div>
-          {bookings.length === 0 && !loadingList && (
+          {filtered.length === 0 && !loadingList && (
             <p className="px-6 py-14 text-center text-sm text-dim" data-testid="admin-empty-state">
-              Nessuna demo prenotata finora. Le nuove richieste appariranno qui in tempo reale.
+              {bookings.length === 0
+                ? "Nessuna demo prenotata finora. Le nuove richieste appariranno qui in tempo reale."
+                : "Nessuna demo con questo stato."}
             </p>
           )}
-          {bookings.map((b) => (
-            <div
-              key={b.id}
-              data-testid="admin-booking-row"
-              className="grid md:grid-cols-[110px_70px_1.2fr_1.4fr_130px] gap-2 md:gap-4 px-6 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
-            >
-              <div className="flex items-center gap-2 text-sm text-slate-100 font-medium">
-                <CalendarDays className="w-3.5 h-3.5 text-neon md:hidden" />
-                {new Date(`${b.date}T00:00:00`).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+          {filtered.map((b) => {
+            const s = statusOf(b);
+            return (
+              <div
+                key={b.id}
+                data-testid="admin-booking-row"
+                className={`grid md:grid-cols-[100px_60px_1.1fr_1.3fr_110px_150px] gap-2 md:gap-4 px-6 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${s === "annullata" ? "opacity-50" : ""}`}
+              >
+                <div className="flex items-center gap-2 text-sm text-slate-100 font-medium">
+                  <CalendarDays className="w-3.5 h-3.5 text-neon md:hidden" />
+                  {new Date(`${b.date}T00:00:00`).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                </div>
+                <div className="font-mono2 text-sm text-neon">{b.time_slot}</div>
+                <div className="flex items-center gap-2 text-sm text-slate-200 min-w-0">
+                  <Building2 className="w-3.5 h-3.5 text-dim shrink-0" />
+                  <span className="truncate">{b.clinic}</span>
+                </div>
+                <div className="text-xs text-mist space-y-1 min-w-0">
+                  <p className="text-slate-200 font-medium text-sm truncate">{b.name}</p>
+                  <p className="flex items-center gap-1.5 truncate"><Mail className="w-3 h-3 text-dim shrink-0" />{b.email}</p>
+                  <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-dim shrink-0" />{b.phone}</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-mist">
+                  <Armchair className="w-3.5 h-3.5 text-dim shrink-0" />
+                  {b.chairs || "—"}
+                </div>
+                <div className="flex flex-col gap-1.5" data-testid="admin-status-cell">
+                  <span className={`w-fit inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono2 text-[9px] uppercase tracking-wider ${STATUS[s].cls}`}>
+                    {STATUS[s].label}
+                  </span>
+                  <div className="flex gap-1">
+                    {Object.entries(STATUS).map(([id, cfg]) => (
+                      <button
+                        key={id}
+                        data-testid={`status-btn-${id}`}
+                        title={`Segna come: ${cfg.label}`}
+                        onClick={() => updateStatus(b.id, id)}
+                        className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors duration-200 ${
+                          s === id ? cfg.cls : "border-white/10 text-dim hover:text-slate-200 hover:border-white/25"
+                        }`}
+                      >
+                        <cfg.icon className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="font-mono2 text-sm text-neon">{b.time_slot}</div>
-              <div className="flex items-center gap-2 text-sm text-slate-200 min-w-0">
-                <Building2 className="w-3.5 h-3.5 text-dim shrink-0" />
-                <span className="truncate">{b.clinic}</span>
-              </div>
-              <div className="text-xs text-mist space-y-1 min-w-0">
-                <p className="text-slate-200 font-medium text-sm truncate">{b.name}</p>
-                <p className="flex items-center gap-1.5 truncate"><Mail className="w-3 h-3 text-dim shrink-0" />{b.email}</p>
-                <p className="flex items-center gap-1.5"><Phone className="w-3 h-3 text-dim shrink-0" />{b.phone}</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-mist">
-                <Armchair className="w-3.5 h-3.5 text-dim shrink-0" />
-                {b.chairs || "—"}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </main>
     </div>
