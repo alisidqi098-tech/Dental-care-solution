@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, Clock, CheckCircle2, Loader2, Video } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, Loader2, Video, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal, ChapterTag } from "./Reveal";
 
@@ -18,12 +18,16 @@ export const BookingForm = () => {
   const days = useMemo(() => {
     const out = [];
     const d = new Date();
-    while (out.length < 12) {
+    while (out.length < 30) {
       d.setDate(d.getDate() + 1);
       if (d.getDay() !== 0) out.push(new Date(d));
     }
     return out;
   }, []);
+
+  const stripRef = useRef(null);
+  const scrollStrip = (dir) =>
+    stripRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
 
   const [date, setDate] = useState(null);
   const [slot, setSlot] = useState(null);
@@ -60,8 +64,8 @@ export const BookingForm = () => {
   return (
     <section id="booking" className="relative py-28 lg:py-36 noise overflow-hidden" data-testid="booking-section">
       <div className="absolute -bottom-52 left-1/2 -translate-x-1/2 w-[1000px] h-[560px] rounded-full bg-teal2/12 blur-[150px] pointer-events-none" />
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-[1fr_1.15fr] gap-16 items-start">
-        <Reveal>
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-[0.85fr_1.3fr] gap-16 items-start">
+        <Reveal className="min-w-0">
           <ChapterTag number="05" label="La Tua Mossa" />
           <h2 className="font-heading font-bold tracking-tight text-3xl sm:text-4xl lg:text-5xl text-slate-50 leading-[1.1]">
             Non ti convince ancora?{" "}
@@ -87,8 +91,8 @@ export const BookingForm = () => {
           </div>
         </Reveal>
 
-        <Reveal delay={0.15}>
-          <div className="rounded-3xl glass glow-cyan p-6 sm:p-9" data-testid="booking-calendar">
+        <Reveal delay={0.15} className="min-w-0">
+          <div className="rounded-3xl glass glow-cyan p-6 sm:p-9 overflow-hidden" data-testid="booking-calendar">
             <AnimatePresence mode="wait">
               {done ? (
                 <motion.div
@@ -120,27 +124,50 @@ export const BookingForm = () => {
                     <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-4 flex items-center gap-2">
                       <CalendarDays className="w-3.5 h-3.5 text-neon" /> 1 · Scegli il giorno
                     </p>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {days.map((d) => {
-                        const active = date && d.toDateString() === date.toDateString();
-                        return (
-                          <button
-                            type="button"
-                            key={d.toISOString()}
-                            data-testid="booking-day-btn"
-                            onClick={() => setDate(d)}
-                            className={`rounded-xl border py-2.5 px-1 text-center transition-all duration-300 ${
-                              active
-                                ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink glow-cyan"
-                                : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
-                            }`}
-                          >
-                            <span className={`block text-[9px] uppercase tracking-wider ${active ? "text-ink/70" : "text-dim"}`}>{fmtDay(d)}</span>
-                            <span className="block font-heading font-bold text-lg leading-tight">{fmtNum(d)}</span>
-                            <span className={`block text-[9px] uppercase ${active ? "text-ink/70" : "text-dim"}`}>{fmtMonth(d)}</span>
-                          </button>
-                        );
-                      })}
+                    <div className="relative group/strip">
+                      <button
+                        type="button"
+                        data-testid="booking-days-prev"
+                        onClick={() => scrollStrip(-1)}
+                        aria-label="Giorni precedenti"
+                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <div
+                        ref={stripRef}
+                        className="flex gap-2 overflow-x-auto px-7 pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                      >
+                        {days.map((d) => {
+                          const active = date && d.toDateString() === date.toDateString();
+                          return (
+                            <button
+                              type="button"
+                              key={d.toISOString()}
+                              data-testid="booking-day-btn"
+                              onClick={() => setDate(d)}
+                              className={`shrink-0 w-[76px] rounded-xl border py-2.5 px-1 text-center transition-all duration-300 ${
+                                active
+                                  ? "bg-gradient-to-b from-teal2 to-neon border-transparent text-ink glow-cyan"
+                                  : "border-white/10 bg-card2/50 text-mist hover:border-neon/40 hover:text-slate-100"
+                              }`}
+                            >
+                              <span className={`block text-[9px] uppercase tracking-wider ${active ? "text-ink/70" : "text-dim"}`}>{fmtDay(d)}</span>
+                              <span className="block font-heading font-bold text-lg leading-tight">{fmtNum(d)}</span>
+                              <span className={`block text-[9px] uppercase ${active ? "text-ink/70" : "text-dim"}`}>{fmtMonth(d)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        data-testid="booking-days-next"
+                        onClick={() => scrollStrip(1)}
+                        aria-label="Giorni successivi"
+                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full glass border border-white/15 flex items-center justify-center text-mist hover:text-neon hover:border-neon/40 transition-colors duration-300"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
