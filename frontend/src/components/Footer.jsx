@@ -16,7 +16,7 @@ export const Footer = () => (
       </div>
       <div className="flex flex-col items-center gap-3">
         <p className="text-xs text-dim text-center">
-          © {new Date().getFullYear()} Digital Care AI · Pagamenti sicuri via Stripe · GDPR Compliant
+          © {new Date().getFullYear()} Digital Care Solution AI · Pagamenti sicuri via Stripe · GDPR Compliant
         </p>
         <a href="/admin" data-testid="footer-admin-link" className="font-mono2 text-[10px] uppercase tracking-[0.2em] text-dim/60 hover:text-neon transition-colors">
           Area Riservata

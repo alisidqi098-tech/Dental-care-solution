@@ -167,7 +167,7 @@ def doctor_confirm_html(b) -> str:
         'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
         f'<h1 style="font-size:20px;margin:0 0 16px">Demo confermata, {escape(b.name)}</h1>'
         '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">La tua videochiamata dimostrativa '
-        'di <strong>15 minuti</strong> con Digital Care AI &egrave; prenotata.</p>'
+        'di <strong>15 minuti</strong> con Digital Care Solution AI &egrave; prenotata.</p>'
         '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b.date))}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b.time_slot)}</strong></td></tr>'
@@ -210,7 +210,7 @@ def doctor_reminder_html(b: dict) -> str:
         'style="padding:24px;font-family:Arial,sans-serif;color:#0f172a">'
         f'<h1 style="font-size:20px;margin:0 0 16px">Ci vediamo domani, {escape(b["name"])}</h1>'
         '<p style="font-size:14px;line-height:1.6;margin:0 0 12px">Ti ricordiamo la tua videochiamata '
-        'dimostrativa di <strong>15 minuti</strong> con Digital Care AI.</p>'
+        'dimostrativa di <strong>15 minuti</strong> con Digital Care Solution AI.</p>'
         '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:0 0 16px">'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Data</td><td><strong>{escape(format_date_it(b["date"]))}</strong></td></tr>'
         f'<tr><td style="padding:4px 16px 4px 0;color:#64748b">Orario</td><td><strong>{escape(b["time_slot"])}</strong></td></tr>'
@@ -466,7 +466,7 @@ class LoginInput(BaseModel):
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
-    return {"message": "Digital Care AI API"}
+    return {"message": "Digital Care Solution AI API"}
 
 
 @api_router.post("/demo-booking", response_model=DemoBooking)
@@ -478,7 +478,7 @@ async def create_demo_booking(input: DemoBookingCreate):
     try:
         await send_email(
             to=booking.email,
-            subject="La tua demo Digital Care AI \u00e8 confermata",
+            subject="La tua demo Digital Care Solution AI \u00e8 confermata",
             html=doctor_confirm_html(booking),
         )
     except Exception as e:

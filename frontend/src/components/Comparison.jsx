@@ -15,7 +15,7 @@ export const Comparison = () => (
         <ChapterTag number="03" label="Il Confronto" />
         <h2 className="font-heading font-bold tracking-tight text-3xl sm:text-4xl lg:text-5xl text-slate-50 max-w-3xl leading-[1.1]">
           Metodo tradizionale vs{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">Digital Care AI</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">Digital Care Solution AI</span>
         </h2>
       </Reveal>
 
