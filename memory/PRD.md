@@ -1,0 +1,53 @@
+# PRD — Dental Care Solution AI Landing Page
+
+## Problem Statement (original)
+Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: titolari di studi dentistici e direttori sanitari. Obiettivo unico: prenotazione videochiamata demo di 15 minuti. Tema scuro (antracite/blu notte) con accenti neon ciano/verde acqua. Struttura: Hero, Problema (empatia), Soluzione (3 step), Tabella confronto, Social proof/sicurezza, Bottom CTA con calendario prenotazione.
+
+## User Personas
+- Titolare di studio dentistico (stressato da telefono/disdette)
+- Direttore sanitario di clinica multi-poltrona (focus ROI e gestionale)
+
+## Architecture
+- Frontend: React 19 + Tailwind + framer-motion + lenis (smooth scroll), componenti in /app/frontend/src/components/
+- Backend: FastAPI (/app/backend/server.py), router /api
+- DB: MongoDB via MONGO_URL, collection `demo_bookings`
+- Design guidelines: /app/design_guidelines.json
+
+## Core Requirements (static)
+1. Hero con headline "Azzera le disdette e libera la tua segreteria dal telefono" + CTA ciano + mockup dashboard/chat WhatsApp in codice
+2. Sezione Problema (3 pain point con icone)
+3. Soluzione in 3 step (Ascolto Attivo, Caparra Stripe, Sincronizzazione)
+4. Tabella Tradizionale vs AI
+5. Sezione fiducia (privacy, Stripe, integrazione invisibile)
+6. Form prenotazione demo stile Calendly con salvataggio DB
+7. CTA con scroll fluido al form
+
+## Implemented (2026-09-12)
+- Hero cinetico: reveal masked line-by-line, mockup WhatsApp auto-play + Dashboard live con tilt 3D parallax e badge fluttuante
+- Marquee editoriale lento (compatibilità OrisLine/XDENT/Stripe/GDPR)
+- Capitoli numerati 01-05 stile manifesto
+- Sezione Problema (40% fuori orario, segreteria interrotta, €350/ora)
+- Soluzione 3 step con linea connettiva
+- Tabella confronto + strip ROI (-98% no-show, +40% prenotazioni, 3 sec)
+- Sezione Affidabilità + 2 testimonianze
+- Booking form: picker giorni (12, domeniche escluse), slot orari, dati studio, POST /api/demo-booking, schermata di conferma
+- Backend: POST /api/demo-booking, GET /api/demo-bookings
+- Lenis smooth scroll + scroll fluido CTA -> #booking
+
+## Verified
+- POST/GET /api/demo-booking via curl (booking salvato e riletto da Mongo)
+- Flusso e2e via screenshot: selezione giorno+slot, compilazione, submit, messaggio di successo visibile
+- Nessuna credenziale/auth richiesta (test_credentials.md vuoto di proposito)
+
+## Backlog
+- P0: Email di conferma automatica al medico (Resend)
+- P1: Notifica WhatsApp/email al team vendite a ogni nuova demo
+- P1: Dashboard admin protetta per vedere le demo prenotate
+- P2: Embed Calendly reale opzionale
+- P2: Integrazione Stripe reale per caparra simulata in demo
+- P2: Multilingua (EN)
+
+## Next Tasks
+1. Collegare Resend per conferma email demo
+2. Admin dashboard prenotazioni (auth JWT)
+3. Pixel/analytics tracciamento conversioni CTA

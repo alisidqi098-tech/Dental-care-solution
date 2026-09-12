@@ -1,0 +1,221 @@
+{
+  "project_name": "Dental Care Solution AI - Landing Page SaaS High-Conversion",
+  "theme": "Dark Theme (Anthracite & Deep Midnight Blue with Neon Cyan/Aqua accents)",
+  "language": "Italian",
+  "archetype": "THE PERFORMANCE PRO / HIGH-TECH CLINICAL LUXURY",
+  "palette": {
+    "bg_primary": "#0B0F19",
+    "bg_secondary": "#111827",
+    "bg_card": "#1E293B",
+    "bg_card_hover": "#243248",
+    "text_primary": "#F8FAFC",
+    "text_secondary": "#94A3B8",
+    "text_muted": "#64748B",
+    "accent_cyan": "#00F2FE",
+    "accent_teal": "#06B6D4",
+    "accent_emerald": "#10B981",
+    "border_subtle": "rgba(255, 255, 255, 0.08)",
+    "border_bright": "rgba(0, 242, 254, 0.3)",
+    "glow_cyan": "0 0 25px rgba(0, 242, 254, 0.25)",
+    "whatsapp_bubble_user": "#1E293B",
+    "whatsapp_bubble_ai": "#0284C7"
+  },
+  "typography": {
+    "font_heading": "'Outfit', 'Cabinet Grotesk', sans-serif",
+    "font_body": "'Plus Jakarta Sans', 'Inter', sans-serif",
+    "font_mono": "'JetBrains Mono', monospace",
+    "imports": [
+      "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    ],
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]",
+      "h2": "text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg font-medium",
+      "body": "text-base sm:text-lg text-slate-300 leading-relaxed",
+      "small": "text-xs sm:text-sm text-slate-400 font-medium"
+    }
+  },
+  "layout_sections": [
+    {
+      "id": "navbar",
+      "name": "Header Navigation Glassmorphism",
+      "description": "Fixed header with blur backdrop, brand logo with illuminated cyan dot, navigation links, and primary CTA button that triggers smooth scroll to booking form.",
+      "components": [
+        "Logo with glowing cyan badge 'AI 2.0'",
+        "Nav links: Problema, Come Funziona, ROI, Garanzia, Contatti",
+        "CTA Button: 'Prenota Demo 15 Min' (cyan gradient with glow hover effect)"
+      ]
+    },
+    {
+      "id": "hero",
+      "name": "Hero Cinetico & Live Interactive Mockup",
+      "description": "Awwwards-style kinetic hero with line-by-line reveal text, glowing badges, and a fully interactive code-built dual mockup (WhatsApp Chatbot + Clinic Management Dashboard).",
+      "headline": "Azzera le disdette e libera la tua segreteria dal telefono",
+      "subheadline": "L'Assistente AI WhatsApp 24/7 per studi dentistici e direttori sanitari. Qualifica i pazienti, incassa caparre antiritiro con Stripe e sincronizza l'agenda in tempo reale.",
+      "cta": "Prenota una Demo di 15 Minuti",
+      "mockup_details": {
+        "left_panel": "Simulatore Chat WhatsApp live con conversazione automatizzata paziente/AI e pagamento caparra Stripe",
+        "right_panel": "Dashboard AI Studio Dentistico con metriche tempo reale: Poltrone Occupate 96%, Appuntamenti Salvati 48/mese, Fatturato Protetto €14.200",
+        "interactive_elements": "Toggle messaggi chat, switch da mobile a tablet, badges fluttuanti 3D con effetto tilt parallax"
+      }
+    },
+    {
+      "id": "editorial-marquee",
+      "name": "Ticker / Marquee Editoriale Lento",
+      "description": "Slow, elegant horizontal drift ticker highlighting software compatibility and key stats.",
+      "items": [
+        "COMPATIBILE CON ORISLINE",
+        "INTEGRAZIONE XDENT",
+        "PAGAMENTI SICURI STRIPE",
+        "SISTEMA GDPR COMPLIANT 100%",
+        "RISPOSTA AUTOMATICA ENTRO 3 SECONDI",
+        "ZERO COSTI DI INSTALLAZIONE",
+        "SUPPORTO MEDICO DEDICATO"
+      ]
+    },
+    {
+      "id": "problema",
+      "name": "Capitolo 01 — Il Problema: Stress ed Efficienza Perdersi in Segreteria",
+      "description": "Empathetic analysis of pain points in dental clinics (missed emergency calls, last-minute cancellations, receptionist fatigue).",
+      "cards": [
+        {
+          "title": "Chiamate perse durante gli interventi",
+          "subtitle": "Mentre il medico lavora, il telefono suona a vuoto. Il 38% dei nuovi pazienti chiama la concorrenza dopo soli 2 minuti di attesa.",
+          "stat": "38% Persi"
+        },
+        {
+          "title": "Poltrone vuote e disdette last-minute",
+          "subtitle": "Un no-show senza preavviso costa allo studio fino a €350/ora tra costi fissi del riunito e tempo dello specialista sprecato.",
+          "stat": "€350/ora persi"
+        },
+        {
+          "title": "Segreteria sopraffatta dalle routine",
+          "subtitle": "Lo staff passa l'80% del tempo a confermare appuntamenti e rispondere alle stesse 10 domande invece di accogliere i pazienti in studio.",
+          "stat": "80% Tempo sprecato"
+        }
+      ]
+    },
+    {
+      "id": "soluzione",
+      "name": "Capitolo 02 — La Soluzione in 3 Step",
+      "description": "Interactive step-by-step workflow showing how Dental Care AI transforms clinic operations.",
+      "steps": [
+        {
+          "step": "01",
+          "title": "Ascolto Attivo & Triage 24/7 su WhatsApp",
+          "desc": "L'AI risponde in italiano naturale su WhatsApp entro 3 secondi. Qualifica il tipo di prestazione (igiene, ortodonzia, emergenza dolore) e propone solo gli slot idonei."
+        },
+        {
+          "step": "02",
+          "title": "Sicurezza Finanziaria con Caparra Stripe",
+          "desc": "Invia un link di pre-autorizzazione o caparra confirmatoria di €30-€50 integrato con Stripe. Risultato: il tasso di disdetta scende dal 22% a meno del 2%."
+        },
+        {
+          "step": "03",
+          "title": "Sincronizzazione Invisibile col Gestionale",
+          "desc": "L'appuntamento viene registrato istantaneamente su OrisLine, XDENT o Winfarm senza ri-digitazione manuale. Il calendario è sempre perfetto."
+        }
+      ]
+    },
+    {
+      "id": "confronto-roi",
+      "name": "Capitolo 03 — Tabella Confronto & ROI Calculator",
+      "description": "Comparison table traditional clinic management vs Dental Care Solution AI + interactive ROI calculation slider.",
+      "comparison_features": [
+        {"feature": "Disponibilità per prenotazioni", "traditional": "Solo orari di studio (8 ore/die)", "ai": "24 ore su 24, 7 giorni su 7"},
+        {"feature": "Tempo di risposta medio", "traditional": "15 min - 4 ore", "ai": "Istantaneo (3 secondi)"},
+        {"feature": "Tasso di Disdetta / No-Show", "traditional": "18% - 25% media nazionale", "ai": "Minore dell'1.8% con Caparra Stripe"},
+        {"feature": "Protezione del fatturato", "traditional": "Nessuna garanzia", "ai": "Caparra automatica incassata su Stripe"},
+        {"feature": "Tempo segreteria al telefono", "traditional": "5-6 ore al giorno", "ai": "Meno di 45 minuti al giorno"},
+        {"feature": "Integrazione Gestionale", "traditional": "Manuale con rischio errori", "ai": "Sincronizzazione automatica 2-way"}
+      ]
+    },
+    {
+      "id": "sicurezza-social-proof",
+      "name": "Capitolo 04 — Sicurezza, Privacy GDPR & Testimonianze",
+      "description": "Trust indicators, GDPR compliance badges, Stripe security protocols, and clinic owner testimonials.",
+      "trust_points": [
+        "100% Conforme al Regolamento Europeo GDPR (Server in UE)",
+        "Crittografia Bancaria End-to-End con Stripe Payments",
+        "Nessun software da sostituire: lavora sopra il tuo gestionale attuale",
+        "Garanzia Senza Rischi: Configurazione assistita in 48 ore"
+      ],
+      "testimonials": [
+        {
+          "quote": "In soli 60 giorni abbiamo ridotto le poltrone vuote a zero. L'AI gestisce le urgenze del weekend e incassa le caparre senza che noi muoviamo un dito.",
+          "author": "Dr. Marco Bellini",
+          "role": "Direttore Sanitario - Centro Odontoiatrico Bellini (Milano)",
+          "metric": "+€18.400 fatturato recuperato"
+        },
+        {
+          "quote": "La mia segreteria era stremata dalle continue telefonate per spostare gli appuntamenti. Ora la gente fa tutto da sola su WhatsApp in 30 secondi.",
+          "author": "Dr.ssa Elena Rossi",
+          "role": "Titolare Studio Dentistico Rossi & Partners (Bologna)",
+          "metric": "-92% telefonate di routine"
+        }
+      ]
+    },
+    {
+      "id": "booking-form",
+      "name": "Capitolo 05 — Prenotazione Demo Interna Stile Calendly",
+      "description": "Interactive demo booking form with date picker, time slot selection, clinic detail fields, and MongoDB REST API backend integration.",
+      "fields": [
+        "Data selezionata (Calendario interattivo)",
+        "Fascia oraria (es. 09:30, 11:00, 15:30, 17:00)",
+        "Nome e Cognome Titolare / Direttore Sanitario",
+        "Nome dello Studio Dentistico",
+        "Email Aziendale / Professionale",
+        "Numero di Telefono WhatsApp",
+        "Numero di Poltrone / Riuniti dello studio"
+      ],
+      "api_endpoint": "/api/demo-booking",
+      "fallback_behavior": "Salva nei dati locali e mostra schermata di conferma istantanea in caso di risposta server."
+    }
+  ],
+  "image_urls": {
+    "dentist_consultation": "https://images.unsplash.com/photo-1777331903190-341a3dd0441b?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "dentist_portrait": "https://images.unsplash.com/photo-1667133295308-9ef24f71952e?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "modern_clinic": "https://images.unsplash.com/photo-1663755787934-3742b0f5983a?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "motion_and_effects": {
+    "smooth_scroll": "Lenis for buttery smooth scrolling",
+    "animations": "Framer Motion line-by-line reveal, smooth scroll-triggered fades, hover glowing borders, micro-interactions on time slot clicks",
+    "3d_effect": "Tilt card container effect on Hero Dual Mockup using motion values"
+  },
+  "data_testid_rules": [
+    "data-testid='navbar'",
+    "data-testid='nav-link-problema'",
+    "data-testid='nav-link-soluzione'",
+    "data-testid='nav-link-roi'",
+    "data-testid='nav-link-garanzia'",
+    "data-testid='hero-cta-button'",
+    "data-testid='hero-mockup-whatsapp'",
+    "data-testid='hero-mockup-dashboard'",
+    "data-testid='problem-card-1'",
+    "data-testid='problem-card-2'",
+    "data-testid='problem-card-3'",
+    "data-testid='solution-step-1'",
+    "data-testid='solution-step-2'",
+    "data-testid='solution-step-3'",
+    "data-testid='roi-calculator-slider'",
+    "data-testid='comparison-table'",
+    "data-testid='booking-calendar'",
+    "data-testid='booking-time-slot-btn'",
+    "data-testid='booking-input-name'",
+    "data-testid='booking-input-clinic'",
+    "data-testid='booking-input-email'",
+    "data-testid='booking-input-phone'",
+    "data-testid='booking-select-chairs'",
+    "data-testid='booking-submit-button'",
+    "data-testid='booking-success-message'"
+  ],
+  "instructions_to_main_agent": [
+    "Use Javascript (.js / .jsx) components as configured in the React workspace.",
+    "Implement Lenis smooth scrolling for high-end luxury scroll feeling.",
+    "Ensure all CTA buttons perform smooth scrolling down to #booking-form section.",
+    "The Hero Dual Mockup MUST be built entirely in HTML/CSS/React (no external image placeholder for the dashboard/chat).",
+    "The Demo Booking Form MUST collect selected date, selected time slot, clinic info and POST to /api/demo-booking.",
+    "Ensure zero transparent dropdowns or unreadable contrast overlays."
+  ]
+}
