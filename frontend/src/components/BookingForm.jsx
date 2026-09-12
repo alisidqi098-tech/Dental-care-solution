@@ -64,7 +64,7 @@ export const BookingForm = () => {
         <Reveal>
           <ChapterTag number="05" label="La Tua Mossa" />
           <h2 className="font-heading font-bold tracking-tight text-3xl sm:text-4xl lg:text-5xl text-slate-50 leading-[1.1]">
-            Non credere alle nostre parole.{" "}
+            Non ti convince ancora?{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon">Guarda il sistema in azione.</span>
           </h2>
           <p className="mt-6 text-base sm:text-lg text-mist leading-relaxed max-w-lg">
