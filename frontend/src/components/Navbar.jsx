@@ -40,7 +40,7 @@ export const Navbar = () => {
           </div>
           <div className="text-left leading-none">
             <span className="font-heading font-bold text-[15px] tracking-tight text-slate-50 block">
-              DigitalCare<span className="text-neon">AI</span>
+              Digital Care <span className="text-neon">AI</span>
             </span>
             <span className="font-mono2 text-[9px] uppercase tracking-[0.28em] text-dim">Solution</span>
           </div>
