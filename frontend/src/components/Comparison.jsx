@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Check, X, Calculator } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { Reveal, ChapterTag } from "./Reveal";
 
 const rows = [
@@ -10,9 +9,6 @@ const rows = [
 ];
 
 export const Comparison = () => {
-  const [hours, setHours] = useState(6);
-  const monthly = Math.round(hours * 350 * 4.33 * 0.95);
-
   return (
     <section id="confronto" className="relative py-28 lg:py-36 noise" data-testid="comparison-section">
       <div className="max-w-6xl mx-auto px-6 lg:px-10">
@@ -66,51 +62,6 @@ export const Comparison = () => {
                 <span className="text-xs text-dim leading-snug">{s.l}</span>
               </div>
             ))}
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.35}>
-          <div className="mt-10 rounded-3xl glass p-8 sm:p-10 glow-cyan" data-testid="roi-calculator">
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-3 flex items-center gap-2">
-                  <Calculator className="w-3.5 h-3.5 text-neon" /> Calcola il tuo ROI
-                </p>
-                <h3 className="font-heading font-bold text-2xl sm:text-3xl text-slate-50 mb-3 leading-tight">
-                  Quante ore di poltrona perdi a settimana?
-                </h3>
-                <p className="text-sm text-mist leading-relaxed">
-                  Tra disdette dell'ultimo minuto e pazienti che non si presentano. Muovi il cursore e guarda quanto recuperi.
-                </p>
-                <input
-                  type="range"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={hours}
-                  onChange={(e) => setHours(Number(e.target.value))}
-                  data-testid="roi-slider"
-                  className="w-full mt-7 accent-[#00F2FE] cursor-pointer"
-                />
-                <div className="flex justify-between items-center font-mono2 text-xs text-dim mt-2">
-                  <span>0h</span>
-                  <span className="text-neon font-bold text-base" data-testid="roi-hours">{hours}h / settimana</span>
-                  <span>20h</span>
-                </div>
-              </div>
-              <div className="text-center lg:text-right">
-                <p className="font-mono2 text-[10px] uppercase tracking-[0.25em] text-dim mb-3">Valore recuperabile al mese*</p>
-                <p
-                  className="font-heading font-extrabold text-5xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-teal2 to-neon text-glow"
-                  data-testid="roi-result"
-                >
-                  €{monthly.toLocaleString("it-IT")}
-                </p>
-                <p className="text-[11px] text-dim mt-3 max-w-xs mx-auto lg:ml-auto lg:mr-0">
-                  *Stima: €350/ora di poltrona, 4,33 settimane/mese, -95% no-show con caparra obbligatoria
-                </p>
-              </div>
-            </div>
           </div>
         </Reveal>
       </div>
