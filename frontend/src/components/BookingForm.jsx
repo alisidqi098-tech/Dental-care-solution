@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Reveal, ChapterTag } from "./Reveal";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30"];
+const DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30", "19:30"];
 const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6];
 const CHAIRS = ["1-2 poltrone", "3-4 poltrone", "5-8 poltrone", "Oltre 8 poltrone"];
 

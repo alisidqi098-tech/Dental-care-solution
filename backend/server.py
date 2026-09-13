@@ -548,7 +548,7 @@ async def bookings_count():
 
 
 DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5, 6]
-DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30"]
+DEFAULT_SLOTS = ["09:00", "09:30", "11:00", "12:30", "15:00", "15:30", "17:00", "18:30", "19:30"]
 
 
 class ScheduleUpdate(BaseModel):

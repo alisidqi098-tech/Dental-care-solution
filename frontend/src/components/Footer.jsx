@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, Mail, Phone, Hash } from "lucide-react";
 
 export const Footer = () => (
   <footer className="border-t border-white/5 bg-panel/60 py-12" data-testid="footer">
@@ -18,6 +18,28 @@ export const Footer = () => (
         <p className="text-xs text-dim text-center">
           © {new Date().getFullYear()} Digital Care Solution AI · Pagamenti sicuri via Stripe · GDPR Compliant
         </p>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs text-mist">
+          <a
+            href="mailto:digitalcaresolution24.7@gmail.com"
+            data-testid="footer-email"
+            className="flex items-center gap-1.5 hover:text-neon transition-colors"
+          >
+            <Mail className="w-3.5 h-3.5 text-neon" />
+            digitalcaresolution24.7@gmail.com
+          </a>
+          <a
+            href="tel:+393270315651"
+            data-testid="footer-phone"
+            className="flex items-center gap-1.5 hover:text-neon transition-colors"
+          >
+            <Phone className="w-3.5 h-3.5 text-neon" />
+            +39 327 031 5651
+          </a>
+          <span data-testid="footer-piva" className="flex items-center gap-1.5">
+            <Hash className="w-3.5 h-3.5 text-neon" />
+            P.IVA 08453291001
+          </span>
+        </div>
         <a href="/admin" data-testid="footer-admin-link" className="font-mono2 text-[10px] uppercase tracking-[0.2em] text-dim/60 hover:text-neon transition-colors">
           Area Riservata
         </a>

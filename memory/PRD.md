@@ -22,6 +22,11 @@ Landing page SaaS ad alta conversione per "Dental Care Solution AI". Target: tit
 6. Form prenotazione demo stile Calendly con salvataggio DB
 7. CTA con scroll fluido al form
 
+## Implemented (2026-09-13, update 8)
+- Ripristinato il blocco mancante del Capitolo 03: ROI calculator interattivo (slider ore poltrona perse → valore recuperabile/mese)
+- Footer: aggiunti email (digitalcaresolution24.7@gmail.com), telefono team (+39 327 031 5651), P.IVA 08453291001
+- Slot demo: aggiunto 19:30 (DB schedule + default backend/frontend)
+
 ## Implemented (2026-09-12, update 7)
 - Email di annullamento al medico quando lo stato diventa "annullata" dall'archivio
 - Calendario configurabile da /admin: card "Giorni e orari prenotabili" (weekday + slot toggle, PUT /api/admin/schedule protetto, GET /api/schedule pubblico); la landing mostra solo giorni/slot attivi
